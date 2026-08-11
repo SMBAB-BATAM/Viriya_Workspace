@@ -401,6 +401,38 @@
 <body>
 
 <!-- ===================== COMPANY SELECT ===================== -->
+
+<!-- ===================== LOGIN ===================== -->
+<div id="view-login" style="display:none;">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="stamp">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        <span>PROCURE</span>
+        <small>WORKSPACE</small>
+      </div>
+      <h1>Wiriya Workspace</h1>
+      <p>Enter your ID and password to continue.</p>
+    </div>
+    <div class="panel">
+      <div class="login-error" id="loginError" style="display:none;"></div>
+      <form onsubmit="return handleLogin(event)">
+        <div class="field">
+          <label for="loginId">User ID</label>
+          <input id="loginId" type="text" placeholder="e.g. haris.pratama" autocomplete="username">
+        </div>
+        <div class="field" style="margin-bottom:22px;">
+          <label for="loginPw">Password</label>
+          <input id="loginPw" type="password" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+      </form>
+      <p class="login-note">Accounts are created and managed under Settings → Manage Users once someone is signed in.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== COMPANY SELECT ===================== -->
 <div id="view-companies" style="display:none;">
   <div class="topbar">
     <div class="topbar-brand">
@@ -409,12 +441,13 @@
     </div>
     <div class="topbar-user">
       <span class="sync-badge" id="syncBadgeTop" onclick="retrySyncIfError()">Not connected</span>
-      <div class="userinfo" onclick="editDisplayName()" style="cursor:pointer;" title="Click to set your display name">
+      <div class="userinfo">
         <b id="topUserName">—</b>
-        <span>Click to set your name</span>
+        <span id="topUserRole">Team Member</span>
       </div>
       <div class="avatar" id="topUserAvatar">—</div>
       <button class="btn btn-ghost btn-sm" onclick="refreshFromServer()">Refresh</button>
+      <button class="btn btn-ghost btn-sm" onclick="handleLogout()">Log Out</button>
     </div>
   </div>
   <div class="companies-wrap">
@@ -491,6 +524,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         Refresh Data
       </div>
+      <div class="nav-item" onclick="handleLogout()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Log Out
+      </div>
     </div>
   </aside>
 
@@ -508,9 +545,9 @@
       </div>
       <div class="topbar-user">
         <span class="sync-badge" id="syncBadgeApp" onclick="retrySyncIfError()">Not connected</span>
-        <div class="userinfo" onclick="editDisplayName()" style="cursor:pointer;" title="Click to set your display name">
+        <div class="userinfo">
           <b id="appUserName">—</b>
-          <span>Click to set your name</span>
+          <span id="appUserRole">Team Member</span>
         </div>
         <div class="avatar" id="appUserAvatar">—</div>
       </div>
@@ -892,16 +929,52 @@ let saveTimer = null;
 
 window.addEventListener('load', async () => {
   updateUserUI();
-  showView('companies');
   if(APPS_SCRIPT_URL.startsWith('YOUR_')){
     setSyncStatus('error');
     toast('Set APPS_SCRIPT_URL in the code first — see the setup notes.');
+    showView('companies');
     renderCompanies();
     return;
   }
   await loadFromServer();
-  renderCompanies();
+  if(state.users && state.users.length){
+    showView('login');
+  } else {
+    // No accounts exist yet — let the first person in so they can
+    // create one under Settings → Manage Users.
+    state.user = { name: 'Team Member' };
+    showView('companies');
+    renderCompanies();
+  }
 });
+
+function handleLogin(e){
+  e.preventDefault();
+  const id = document.getElementById('loginId').value.trim();
+  const pw = document.getElementById('loginPw').value;
+  const err = document.getElementById('loginError');
+  const match = state.users.find(u => u.username === id && u.password === pw);
+  if(!match){
+    err.textContent = 'Incorrect ID or password.';
+    err.style.display = 'block';
+    return false;
+  }
+  err.style.display = 'none';
+  document.getElementById('loginId').value = '';
+  document.getElementById('loginPw').value = '';
+  state.user = { name: match.nama, id: match.username, role: match.role, companyAccess: match.companyAccess || [] };
+  updateUserUI();
+  showView('companies');
+  renderCompanies();
+  return false;
+}
+
+function handleLogout(){
+  state.user = { name: 'Team Member' };
+  state.currentCompanyId = null;
+  updateUserUI();
+  showView('login');
+}
 
 async function loadFromServer(){
   setSyncStatus('syncing');
@@ -935,18 +1008,14 @@ async function refreshFromServer(){
 
 function updateUserUI(){
   const name = state.user ? state.user.name : 'Team Member';
+  const role = state.user && state.user.role ? state.user.role : 'Team Member';
   document.getElementById('topUserName').textContent = name;
   document.getElementById('appUserName').textContent = name;
+  document.getElementById('topUserRole').textContent = role;
+  document.getElementById('appUserRole').textContent = role;
   const avatarHTML = initials(name);
   document.getElementById('topUserAvatar').innerHTML = avatarHTML;
   document.getElementById('appUserAvatar').innerHTML = avatarHTML;
-}
-function editDisplayName(){
-  const val = prompt('Your name (just for display on this device — not a login):', state.user.name);
-  if(val && val.trim()){
-    state.user.name = val.trim();
-    updateUserUI();
-  }
 }
 
 function snapshotData(){
@@ -1002,6 +1071,7 @@ function setSyncStatus(s){
 
 /* ============ VIEW SWITCH ============ */
 function showView(name){
+  document.getElementById('view-login').style.display = name==='login' ? 'flex':'none';
   document.getElementById('view-companies').style.display = name==='companies' ? 'block':'none';
   document.getElementById('view-app').style.display = name==='app' ? 'flex':'none';
 }
