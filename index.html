@@ -861,31 +861,13 @@ const ICONS = {
 /* ============ STATE (in-memory demo data) ============ */
 let state = {
   user: { name: 'Team Member' },
-  companies: [
-    {id:'c1', kode:'NIP', nama:'PT Nusantara Industri Prima', industri:'Heavy Equipment Manufacturing', alamat:'MM2100 Industrial Estate, Cikarang, West Java, Indonesia'},
-    {id:'c2', kode:'SLG', nama:'PT Sinar Logistik Global', industri:'Logistics & Distribution', alamat:'Jl. Yos Sudarso No. 45, Tanjung Priok, North Jakarta, Indonesia'}
-  ],
+  companies: [],
   categories: ['Raw Materials','Services','Heavy Equipment & Machinery','IT & Electronics','Logistics & Distribution','MRO (Maintenance)','Construction','Office Supplies','Other'],
-  suppliers: [
-    {id:'s1', companyId:'c1', kode:'SUP-0001', nama:'PT Baja Sentosa Abadi', kategori:'Raw Materials', alamat:'Jl. Industri Raya No.12, Bekasi, Indonesia', telepon:'+62 21 8880 1122', email:'sales@bajasentosa.co.id', pic:'Andri Wibowo', payment:'Net 30', status:true, catatan:''},
-    {id:'s2', companyId:'c1', kode:'SUP-0002', nama:'CV Cahaya Elektronik', kategori:'IT & Electronics', alamat:'Ruko Mangga Dua Block C2, Jakarta, Indonesia', telepon:'+62 21 6123 4455', email:'cs@cahayaelektronik.id', pic:'Sinta Dewi', payment:'Net 14', status:true, catatan:'Annual contract renewed every January'},
-    {id:'s3', companyId:'c1', kode:'SUP-0003', nama:'PT Karya Konstruksi Mandiri', kategori:'Construction', alamat:'Jl. Sudirman Kav. 9, Bandung, Indonesia', telepon:'+62 22 4211 7788', email:'info@karyakonstruksi.co.id', pic:'Budi Santoso', payment:'Net 60', status:false, catatan:''},
-    {id:'s4', companyId:'c2', kode:'SUP-0001', nama:'PT Armada Trans Nusantara', kategori:'Logistics & Distribution', alamat:'Jl. Raya Priok No. 88, North Jakarta, Indonesia', telepon:'+62 21 4390 2211', email:'ops@armadatrans.co.id', pic:'Rudi Hartono', payment:'Net 30', status:true, catatan:''}
-  ],
-  users: [
-    {id:'u1', nama:'Haris Pratama', username:'haris.pratama', role:'Administrator', password:'demo123', foto:null, companyAccess:['c1','c2']},
-    {id:'u2', nama:'Dewi Anggraini', username:'dewi.anggraini', role:'Staff Procurement', password:'demo123', foto:null, companyAccess:['c1']}
-  ],
+  suppliers: [],
+  users: [],
   categoriesItem: ['General','Sparepart','Subcon','Raw Material'],
   currencies: ['IDR','USD','SGD'],
-  items: [
-    {id:'i1', companyId:'c1', category:'Sparepart', nama:'Hot Runner Controller 2 Zone', brand:'', remarks:'Model CW201', lastPrice:{amount:440, currency:'USD', supplierId:'s2', date:'2026-07'}, priceHistory:[{date:'2026-07', supplierId:'s2', price:440, currency:'USD', comparisonTitle:'Initial data'}]},
-    {id:'i2', companyId:'c1', category:'Raw Material', nama:'Hydraulic Oil ISO 46', brand:'Shell', remarks:'', lastPrice:{amount:850000, currency:'IDR', supplierId:'s1', date:'2026-06'}, priceHistory:[{date:'2026-06', supplierId:'s1', price:850000, currency:'IDR', comparisonTitle:'Initial data'}]},
-    {id:'i3', companyId:'c1', category:'Sparepart', nama:'Bearing 6205ZZ', brand:'SKF', remarks:'', lastPrice:{amount:12, currency:'USD', supplierId:'s2', date:'2026-06'}, priceHistory:[{date:'2026-06', supplierId:'s2', price:12, currency:'USD', comparisonTitle:'Initial data'}]},
-    {id:'i4', companyId:'c1', category:'Subcon', nama:'Structural Frame Welding Service', brand:'', remarks:'Per unit frame', lastPrice:{amount:3200000, currency:'IDR', supplierId:'s3', date:'2026-05'}, priceHistory:[{date:'2026-05', supplierId:'s3', price:3200000, currency:'IDR', comparisonTitle:'Initial data'}]},
-    {id:'i5', companyId:'c1', category:'General', nama:'Office Paper A4', brand:'PaperOne', remarks:'', lastPrice:null, priceHistory:[]},
-    {id:'i6', companyId:'c1', category:'Raw Material', nama:'Steel Plate 10mm', brand:'', remarks:'1200x2400mm', lastPrice:null, priceHistory:[]}
-  ],
+  items: [],
   comparisons: [],
   currentCompanyId: null,
   activeMenu: 'dashboard',
@@ -926,6 +908,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxex3gWBwtl7HQJ
 
 let syncStatus = 'idle'; // idle | syncing | synced | error
 let saveTimer = null;
+let dataLoaded = false; // becomes true only after a successful load — protects against saving over real data before we've actually read it
 
 window.addEventListener('load', async () => {
   updateUserUI();
@@ -992,6 +975,7 @@ async function loadFromServer(){
       state.currencies = json.currencies || state.currencies;
       state.categoriesItem = json.categoriesItem || state.categoriesItem;
     }
+    dataLoaded = true;
     setSyncStatus('synced');
   } catch(err){
     console.error(err);
@@ -1034,12 +1018,24 @@ function snapshotData(){
 
 function scheduleSave(){
   if(APPS_SCRIPT_URL.startsWith('YOUR_')) return;
+  if(!dataLoaded){
+    // Safety net: never save if we haven't successfully loaded real
+    // data first — this would otherwise risk overwriting real Drive
+    // data with an incomplete or empty in-memory state.
+    console.warn('Skipped save — data has not been successfully loaded from Drive yet.');
+    toast('Not synced yet — try Refresh before making changes.');
+    return;
+  }
   setSyncStatus('syncing');
   clearTimeout(saveTimer);
   saveTimer = setTimeout(saveToServer, 900);
 }
 
 async function saveToServer(){
+  if(!dataLoaded){
+    console.warn('Skipped save — data has not been successfully loaded from Drive yet.');
+    return;
+  }
   try{
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
@@ -1057,7 +1053,15 @@ async function saveToServer(){
 }
 
 function retrySyncIfError(){
-  if(syncStatus === 'error') saveToServer();
+  if(syncStatus !== 'error') return;
+  if(!dataLoaded){
+    // The failure was on load, not save — retry by reloading, never by saving.
+    loadFromServer().then(()=>{
+      if(state.currentCompanyId){ renderContent(); } else { renderCompanies(); }
+    });
+  } else {
+    saveToServer();
+  }
 }
 
 function setSyncStatus(s){
