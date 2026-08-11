@@ -1,0 +1,2010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wiriya Workspace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#12151b;
+    --bg-elevated:#171b23;
+    --surface:#1d222c;
+    --surface-hover:#242a36;
+    --border:#2a313d;
+    --border-strong:#3a4351;
+    --text-primary:#edeff2;
+    --text-secondary:#9aa3b2;
+    --text-muted:#69707f;
+    --accent:#c89b5c;
+    --accent-hover:#d9ad6e;
+    --accent-soft:rgba(200,155,92,0.12);
+    --teal:#4fafa8;
+    --teal-soft:rgba(79,175,168,0.12);
+    --danger:#e2685c;
+    --danger-soft:rgba(226,104,92,0.12);
+    --success:#6cbf84;
+    --success-soft:rgba(108,191,132,0.12);
+    --radius-sm:6px;
+    --radius-md:10px;
+    --radius-lg:16px;
+    --shadow-lift:0 8px 30px rgba(0,0,0,0.35);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg);
+    color:var(--text-primary);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  ::selection{background:var(--accent-soft);color:var(--accent-hover);}
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:10px;}
+  a{color:inherit;text-decoration:none;}
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:inherit;}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  .display{font-family:'Space Grotesk',sans-serif;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
+  }
+
+  /* ---------- Stamp signature element ---------- */
+  .stamp{
+    width:112px;height:112px;border-radius:50%;
+    border:1.5px dashed var(--accent);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    transform:rotate(-9deg);
+    color:var(--accent);
+    gap:4px;
+    flex-shrink:0;
+  }
+  .stamp svg{width:22px;height:22px;}
+  .stamp span{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;font-weight:500;}
+  .stamp small{font-family:'IBM Plex Mono',monospace;font-size:7px;letter-spacing:1.5px;color:var(--text-muted);}
+
+  /* ---------- Login ---------- */
+  #view-login{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    padding:24px;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(200,155,92,0.06), transparent 45%),
+      radial-gradient(circle at 85% 80%, rgba(79,175,168,0.05), transparent 45%),
+      var(--bg);
+  }
+  .login-card{
+    width:100%;max-width:400px;
+    animation:riseIn .5s ease both;
+  }
+  @keyframes riseIn{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+  .login-brand{display:flex;flex-direction:column;align-items:center;gap:18px;margin-bottom:36px;text-align:center;}
+  .login-brand h1{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:600;letter-spacing:-0.2px;}
+  .login-brand p{color:var(--text-secondary);font-size:13.5px;margin-top:4px;}
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    padding:32px;
+    box-shadow:var(--shadow-lift);
+  }
+  .field{margin-bottom:18px;}
+  .field:last-of-type{margin-bottom:0;}
+  .field label{display:block;font-size:12.5px;font-weight:600;color:var(--text-secondary);margin-bottom:7px;letter-spacing:0.2px;}
+  .field input,.field select,.field textarea{
+    width:100%;background:var(--bg-elevated);border:1px solid var(--border);
+    border-radius:var(--radius-sm);padding:11px 13px;color:var(--text-primary);
+    font-size:14px;transition:border-color .15s ease, background .15s ease;
+  }
+  .field input::placeholder,.field textarea::placeholder{color:var(--text-muted);}
+  .field input:hover,.field select:hover,.field textarea:hover{border-color:var(--border-strong);}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);background:var(--surface-hover);}
+  .field textarea{resize:vertical;min-height:64px;}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    border:1px solid transparent;border-radius:var(--radius-sm);
+    padding:11px 18px;font-size:14px;font-weight:600;
+    transition:all .15s ease; white-space:nowrap;
+  }
+  .btn-primary{background:var(--accent);color:#1a1305;}
+  .btn-primary:hover{background:var(--accent-hover);}
+  .btn-primary:active{transform:translateY(1px);}
+  .btn-block{width:100%;}
+  .btn-ghost{background:transparent;color:var(--text-secondary);border-color:var(--border);}
+  .btn-ghost:hover{color:var(--text-primary);border-color:var(--border-strong);background:var(--surface-hover);}
+  .btn-danger-ghost{background:transparent;color:var(--danger);border-color:var(--border);}
+  .btn-danger-ghost:hover{background:var(--danger-soft);border-color:var(--danger);}
+  .btn-sm{padding:7px 12px;font-size:13px;}
+  .btn-icon{padding:8px;border-radius:var(--radius-sm);}
+  .login-note{margin-top:20px;text-align:center;font-size:11.5px;color:var(--text-muted);line-height:1.6;}
+  .login-error{
+    background:var(--danger-soft);color:var(--danger);border:1px solid rgba(226,104,92,0.3);
+    border-radius:var(--radius-sm);padding:10px 12px;font-size:12.5px;margin-bottom:16px;display:none;
+  }
+
+  /* ---------- Company select ---------- */
+  #view-companies{min-height:100vh;background:var(--bg);}
+  .topbar{
+    height:64px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 28px;border-bottom:1px solid var(--border);background:var(--bg-elevated);
+    position:sticky;top:0;z-index:20;
+  }
+  .topbar-brand{display:flex;align-items:center;gap:10px;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:15px;}
+  .topbar-brand .mark{
+    width:30px;height:30px;border-radius:8px;border:1.5px dashed var(--accent);
+    display:flex;align-items:center;justify-content:center;color:var(--accent);transform:rotate(-6deg);
+  }
+  .topbar-brand .mark svg{width:15px;height:15px;}
+  .topbar-user{display:flex;align-items:center;gap:14px;}
+  .avatar{
+    width:34px;height:34px;border-radius:50%;background:var(--teal-soft);color:var(--teal);
+    display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;font-family:'Space Grotesk',sans-serif;
+  }
+  .userinfo{display:flex;flex-direction:column;line-height:1.3;}
+  .userinfo b{font-size:13px;font-weight:600;}
+  .userinfo span{font-size:11.5px;color:var(--text-muted);}
+
+  .companies-wrap{max-width:980px;margin:0 auto;padding:56px 28px;}
+  .companies-head{margin-bottom:32px;}
+  .companies-head .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--accent);text-transform:uppercase;margin-bottom:10px;}
+  .companies-head h2{font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:600;margin-bottom:8px;}
+  .companies-head p{color:var(--text-secondary);font-size:14px;}
+  .company-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px;}
+  .company-card{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);
+    padding:22px;cursor:pointer;transition:all .15s ease;position:relative;
+  }
+  .company-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow-lift);}
+  .company-card .code{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:1px;margin-bottom:14px;display:inline-block;background:var(--accent-soft);padding:3px 8px;border-radius:4px;}
+  .company-card h3{font-size:16px;font-weight:600;margin-bottom:6px;}
+  .company-card p{font-size:12.5px;color:var(--text-secondary);margin-bottom:16px;line-height:1.5;}
+  .company-card .meta{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--text-muted);border-top:1px solid var(--border);padding-top:12px;}
+  .company-card .del-btn{position:absolute;top:16px;right:16px;opacity:0;transition:opacity .15s ease;color:var(--text-muted);}
+  .company-card:hover .del-btn{opacity:1;}
+  .company-card .del-btn:hover{color:var(--danger);}
+  .company-card-add{
+    background:transparent;border:1.5px dashed var(--border-strong);border-radius:var(--radius-md);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+    padding:22px;cursor:pointer;transition:all .15s ease;color:var(--text-secondary);min-height:150px;
+  }
+  .company-card-add:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);}
+  .company-card-add svg{width:22px;height:22px;}
+  .company-card-add span{font-size:13px;font-weight:600;}
+
+  /* ---------- App shell ---------- */
+  #view-app{display:flex;min-height:100vh;}
+  .sidebar{
+    width:240px;flex-shrink:0;background:var(--bg-elevated);border-right:1px solid var(--border);
+    display:flex;flex-direction:column;padding:20px 14px;position:sticky;top:0;height:100vh;
+  }
+  .sidebar-brand{display:flex;align-items:center;gap:10px;padding:6px 8px 22px;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+  .sidebar-brand .mark{width:28px;height:28px;border-radius:7px;border:1.5px dashed var(--accent);display:flex;align-items:center;justify-content:center;color:var(--accent);transform:rotate(-6deg);flex-shrink:0;}
+  .sidebar-brand .mark svg{width:14px;height:14px;}
+  .nav-section{margin-bottom:6px;}
+  .nav-label{font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);padding:10px 10px 6px;font-weight:600;}
+  .nav-item{
+    display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:var(--radius-sm);
+    font-size:13.5px;font-weight:500;color:var(--text-secondary);cursor:pointer;transition:all .12s ease;margin-bottom:2px;
+  }
+  .nav-item svg{width:17px;height:17px;flex-shrink:0;}
+  .nav-item:hover{background:var(--surface-hover);color:var(--text-primary);}
+  .nav-item.active{background:var(--accent-soft);color:var(--accent);}
+  .nav-sub{margin-left:14px;padding-left:14px;border-left:1px solid var(--border);margin-bottom:8px;}
+  .nav-sub .nav-item{font-size:13px;padding:8px 12px;}
+  .nav-item.disabled{opacity:0.4;cursor:default;}
+  .nav-item.disabled:hover{background:transparent;color:var(--text-secondary);}
+  .nav-tag{margin-left:auto;font-size:9px;font-family:'IBM Plex Mono',monospace;letter-spacing:0.5px;color:var(--text-muted);border:1px solid var(--border);padding:1px 5px;border-radius:4px;}
+  .sidebar-footer{margin-top:auto;padding-top:14px;border-top:1px solid var(--border);}
+
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .app-topbar{
+    height:64px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
+    padding:0 28px;border-bottom:1px solid var(--border);background:var(--bg-elevated);position:sticky;top:0;z-index:15;
+  }
+  .company-switch{display:flex;align-items:center;gap:10px;padding:7px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;transition:all .15s ease;}
+  .company-switch:hover{border-color:var(--border-strong);background:var(--surface-hover);}
+  .company-switch .code{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--accent);background:var(--accent-soft);padding:2px 6px;border-radius:4px;}
+  .company-switch b{font-size:13.5px;font-weight:600;}
+  .company-switch svg{width:14px;height:14px;color:var(--text-muted);}
+
+  .content{padding:32px;max-width:1400px;width:100%;margin:0 auto;}
+  .page-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:26px;gap:16px;flex-wrap:wrap;}
+  .page-head .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--accent);text-transform:uppercase;margin-bottom:8px;}
+  .page-head h2{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:600;}
+  .page-head p{color:var(--text-secondary);font-size:13.5px;margin-top:4px;}
+
+  /* Dashboard */
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:8px;}
+  .kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:20px;}
+  .kpi-card .label{font-size:12px;color:var(--text-secondary);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
+  .kpi-card .label svg{width:16px;height:16px;color:var(--text-muted);}
+  .kpi-card .value{font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:600;}
+  .kpi-card .sub{font-size:11.5px;color:var(--text-muted);margin-top:6px;}
+  .welcome-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:26px;margin-top:20px;display:flex;align-items:center;gap:22px;}
+  .welcome-panel .stamp{width:70px;height:70px;}
+  .welcome-panel .stamp svg{width:15px;height:15px;}
+  .welcome-panel .stamp span{font-size:6.5px;}
+  .welcome-panel .stamp small{display:none;}
+  .welcome-panel h3{font-size:15px;font-weight:600;margin-bottom:5px;}
+  .welcome-panel p{font-size:13px;color:var(--text-secondary);line-height:1.6;}
+
+  /* Toolbar + table */
+  .toolbar{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+  .search-box{position:relative;flex:1;min-width:200px;max-width:340px;}
+  .search-box svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--text-muted);}
+  .search-box input{width:100%;padding:10px 12px 10px 36px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:13.5px;}
+  .search-box input:focus{border-color:var(--accent);}
+  .filter-select{padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-secondary);font-size:13.5px;min-width:180px;}
+  .toolbar .spacer{flex:1;}
+
+  .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;}
+  .table-scroll{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;min-width:920px;}
+  thead th{
+    text-align:left;font-size:11px;letter-spacing:0.6px;text-transform:uppercase;color:var(--text-muted);
+    font-weight:600;padding:13px 16px;border-bottom:1px solid var(--border);background:var(--bg-elevated);white-space:nowrap;
+  }
+  tbody td{padding:14px 16px;font-size:13.5px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr{transition:background .1s ease;}
+  tbody tr:hover{background:var(--surface-hover);}
+  td.code{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--accent);}
+  td .name-cell b{display:block;font-weight:600;font-size:13.5px;}
+  td .name-cell span{display:block;font-size:11.5px;color:var(--text-muted);margin-top:2px;}
+  .badge{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:4px 9px;border-radius:20px;background:var(--teal-soft);color:var(--teal);white-space:nowrap;}
+  .status-dot{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;}
+  .status-dot::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--success);}
+  .status-dot.inactive::before{background:var(--text-muted);}
+  .status-dot.inactive{color:var(--text-muted);}
+  .row-actions{display:flex;gap:6px;justify-content:flex-end;}
+  .row-actions button{background:transparent;border:1px solid var(--border);color:var(--text-secondary);border-radius:6px;padding:6px;display:flex;}
+  .row-actions button svg{width:14px;height:14px;}
+  .row-actions button:hover{border-color:var(--border-strong);color:var(--text-primary);background:var(--surface-hover);}
+  .row-actions button.del:hover{border-color:var(--danger);color:var(--danger);background:var(--danger-soft);}
+
+  .empty-state{padding:70px 20px;text-align:center;}
+  .empty-state .stamp{margin:0 auto 20px;opacity:0.55;}
+  .empty-state h3{font-size:15px;font-weight:600;margin-bottom:6px;}
+  .empty-state p{font-size:13px;color:var(--text-secondary);margin-bottom:20px;}
+
+  /* Modal */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(8,10,13,0.7);backdrop-filter:blur(2px);
+    display:none;align-items:flex-start;justify-content:center;z-index:100;padding:40px 20px;overflow-y:auto;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+    width:100%;max-width:620px;box-shadow:var(--shadow-lift);animation:modalIn .18s ease both;margin:auto 0;
+  }
+  @keyframes modalIn{from{opacity:0;transform:translateY(10px) scale(.98);}to{opacity:1;transform:translateY(0) scale(1);}}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:22px 26px;border-bottom:1px solid var(--border);}
+  .modal-head h3{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:600;}
+  .modal-head p{font-size:12px;color:var(--text-muted);margin-top:3px;}
+  .modal-close{background:transparent;border:1px solid var(--border);border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);}
+  .modal-close:hover{color:var(--text-primary);border-color:var(--border-strong);}
+  .modal-close svg{width:15px;height:15px;}
+  .modal-body{padding:24px 26px;max-height:60vh;overflow-y:auto;}
+  .modal-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:18px 26px;border-top:1px solid var(--border);}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 14px;}
+  .form-grid .span-2{grid-column:1/-1;}
+  .cat-row{display:flex;gap:8px;}
+  .cat-row select{flex:1;}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;}
+  .toggle-row .t-label{font-size:13.5px;font-weight:600;}
+  .toggle-row .t-sub{font-size:11.5px;color:var(--text-muted);margin-top:2px;}
+  .switch{position:relative;width:42px;height:24px;flex-shrink:0;}
+  .switch input{opacity:0;width:100%;height:100%;position:absolute;margin:0;cursor:pointer;z-index:2;}
+  .switch .track{position:absolute;inset:0;background:var(--border-strong);border-radius:20px;transition:background .15s ease;}
+  .switch .thumb{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--text-secondary);transition:all .15s ease;}
+  .switch input:checked ~ .track{background:var(--success-soft);border:1px solid var(--success);}
+  .switch input:checked ~ .thumb{transform:translateX(18px);background:var(--success);}
+
+  @media (max-width:880px){
+    .sidebar{position:fixed;left:-260px;top:0;z-index:60;transition:left .2s ease;box-shadow:var(--shadow-lift);}
+    .sidebar.open{left:0;}
+    .form-grid{grid-template-columns:1fr;}
+    .content{padding:20px 16px;}
+    .topbar,.app-topbar{padding:0 16px;}
+  }
+  .hamburger{display:none;background:transparent;border:1px solid var(--border);border-radius:8px;width:36px;height:36px;align-items:center;justify-content:center;color:var(--text-secondary);}
+  @media (max-width:880px){.hamburger{display:flex;}}
+
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius-sm);
+    padding:12px 18px;font-size:13px;font-weight:500;box-shadow:var(--shadow-lift);
+    display:flex;align-items:center;gap:10px;z-index:200;opacity:0;pointer-events:none;transition:all .25s ease;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .toast svg{width:16px;height:16px;color:var(--success);flex-shrink:0;}
+
+  /* Photo upload + user management */
+  .photo-upload{display:flex;align-items:center;gap:16px;margin-bottom:22px;}
+  .photo-preview{
+    width:64px;height:64px;border-radius:50%;background:var(--bg-elevated);border:1px solid var(--border);
+    display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;
+    color:var(--text-muted);font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:17px;
+  }
+  .photo-preview img{width:100%;height:100%;object-fit:cover;}
+  .photo-upload-actions{display:flex;flex-direction:column;gap:8px;}
+  .photo-upload-actions input[type=file]{display:none;}
+  .access-list{display:flex;flex-direction:column;gap:8px;max-height:150px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;background:var(--bg-elevated);}
+  .access-item{display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;}
+  .access-item input{width:15px;height:15px;accent-color:var(--accent);flex-shrink:0;}
+  .role-badge{display:inline-flex;font-size:11px;font-weight:600;padding:4px 9px;border-radius:20px;background:var(--accent-soft);color:var(--accent);white-space:nowrap;}
+  .table-avatar{
+    width:34px;height:34px;border-radius:50%;overflow:hidden;background:var(--teal-soft);color:var(--teal);
+    display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;font-family:'Space Grotesk',sans-serif;
+  }
+  .table-avatar img{width:100%;height:100%;object-fit:cover;}
+
+  /* Google sign-in + Drive sync */
+  .google-btn{
+    background:#fff;color:#3c4043;border:1px solid #dadce0;gap:10px;font-weight:600;
+  }
+  .google-btn:hover{background:#f8f9fa;box-shadow:0 1px 2px rgba(0,0,0,0.15);}
+  .setup-warning{
+    background:var(--danger-soft);border:1px solid rgba(226,104,92,0.35);border-radius:var(--radius-sm);
+    padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--text-secondary);line-height:1.6;
+  }
+  .setup-warning b{color:var(--danger);display:block;margin-bottom:4px;font-size:12.5px;}
+  .sync-badge{
+    display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:500;color:var(--text-muted);
+    padding:5px 10px;border-radius:20px;border:1px solid var(--border);cursor:default;white-space:nowrap;
+  }
+  .sync-badge::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--text-muted);flex-shrink:0;}
+  .sync-badge.sync-synced{color:var(--success);border-color:rgba(108,191,132,0.3);}
+  .sync-badge.sync-synced::before{background:var(--success);}
+  .sync-badge.sync-syncing{color:var(--accent);border-color:rgba(200,155,92,0.3);}
+  .sync-badge.sync-syncing::before{background:var(--accent);animation:pulse 1s ease-in-out infinite;}
+  .sync-badge.sync-error{color:var(--danger);border-color:rgba(226,104,92,0.3);cursor:pointer;}
+  .sync-badge.sync-error::before{background:var(--danger);}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+  .user-photo{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+
+  /* Item Master + Comparison */
+  .section-label{font-size:12.5px;font-weight:600;color:var(--text-secondary);margin:20px 0 12px;padding-top:16px;border-top:1px solid var(--border);}
+  .tab-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+  .tab-pill{
+    background:var(--surface);border:1px solid var(--border);color:var(--text-secondary);
+    padding:8px 14px;border-radius:20px;font-size:12.5px;font-weight:600;cursor:pointer;transition:all .12s ease;
+  }
+  .tab-pill:hover{border-color:var(--border-strong);color:var(--text-primary);}
+  .tab-pill.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+  .btn-icon-mini{background:transparent;border:1px solid var(--border);color:var(--text-muted);border-radius:6px;padding:5px;display:flex;flex-shrink:0;}
+  .btn-icon-mini svg{width:13px;height:13px;}
+  .btn-icon-mini:hover{color:var(--danger);border-color:var(--danger);}
+  table.comparison-table{min-width:1100px;}
+  table.comparison-table th, table.comparison-table td{padding:9px 10px;}
+  table.comparison-table .vendor-head{display:flex;align-items:center;gap:6px;justify-content:center;}
+  table.comparison-table select, table.comparison-table input{
+    width:100%;background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;
+    padding:7px 8px;color:var(--text-primary);font-size:12.5px;
+  }
+  table.comparison-table select:focus, table.comparison-table input:focus{border-color:var(--accent);}
+  table.comparison-table thead tr:first-child th{background:var(--surface);border-bottom:1px solid var(--border);}
+  table.comparison-table thead tr:last-child th{font-size:10.5px;text-transform:none;letter-spacing:0;}
+  .win-cell{text-align:center;}
+  .win-cell.is-winner, td.is-winner{background:var(--success-soft);}
+  .win-cell input, td[class*="win-cell"] input{width:auto;accent-color:var(--success);}
+  tr.shipping-row td{background:var(--bg-elevated);font-size:12.5px;}
+  tr.grandtotal-row td{background:var(--accent-soft);border-top:2px solid var(--accent);}
+</style>
+</head>
+<body>
+
+<!-- ===================== COMPANY SELECT ===================== -->
+<div id="view-companies" style="display:none;">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+      Wiriya Workspace
+    </div>
+    <div class="topbar-user">
+      <span class="sync-badge" id="syncBadgeTop" onclick="retrySyncIfError()">Not connected</span>
+      <div class="userinfo" onclick="editDisplayName()" style="cursor:pointer;" title="Click to set your display name">
+        <b id="topUserName">—</b>
+        <span>Click to set your name</span>
+      </div>
+      <div class="avatar" id="topUserAvatar">—</div>
+      <button class="btn btn-ghost btn-sm" onclick="refreshFromServer()">Refresh</button>
+    </div>
+  </div>
+  <div class="companies-wrap">
+    <div class="companies-head">
+      <div class="eyebrow">Select Workspace</div>
+      <h2>Your Companies</h2>
+      <p>Choose a company to access procurement data, or add a new one.</p>
+    </div>
+    <div class="company-grid" id="companyGrid"></div>
+  </div>
+</div>
+
+<!-- ===================== APP SHELL ===================== -->
+<div id="view-app" style="display:none;">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+      Wiriya Workspace
+    </div>
+    <div class="nav-section">
+      <div class="nav-item" id="nav-dashboard" onclick="navigate('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Dashboard
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Modules</div>
+      <div class="nav-item" id="nav-procurement-head" onclick="toggleProcurementMenu()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8V7l-3-4H6L3 7v1"/><path d="M3 8h18l-1.5 12.5A2 2 0 0 1 17.5 22h-11a2 2 0 0 1-2-1.5L3 8Z"/><path d="M9 12h6"/></svg>
+        Procurement
+      </div>
+      <div class="nav-sub" id="procurementSub">
+        <div class="nav-item" id="nav-master-supplier" onclick="navigate('master-supplier')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Master Supplier
+        </div>
+        <div class="nav-item" id="nav-item-master" onclick="navigate('item-master')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 7.3 12 12l-8.5-4.7"/><path d="M12 22V12"/><path d="m20.5 16.7-8.5 4.7-8.5-4.7V7.3L12 2l8.5 5.3z"/></svg>
+          Item Master
+        </div>
+        <div class="nav-item" id="nav-comparison" onclick="navigate('comparison')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>
+          Comparison
+        </div>
+        <div class="nav-item disabled">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+          Purchase Request
+          <span class="nav-tag">SOON</span>
+        </div>
+        <div class="nav-item disabled">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+          Purchase Order
+          <span class="nav-tag">SOON</span>
+        </div>
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Settings</div>
+      <div class="nav-item" id="nav-company-management" onclick="navigate('company-management')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="1"/><line x1="9" y1="7" x2="9" y2="7"/><line x1="15" y1="7" x2="15" y2="7"/><line x1="9" y1="12" x2="9" y2="12"/><line x1="15" y1="12" x2="15" y2="12"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+        Manage Companies
+      </div>
+      <div class="nav-item" id="nav-user-management" onclick="navigate('user-management')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 1 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>
+        Manage Users
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="nav-item" onclick="backToCompanies()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l9-6 9 6v13"/><path d="M9 21v-8h6v8"/></svg>
+        Switch Company
+      </div>
+      <div class="nav-item" onclick="refreshFromServer()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Refresh Data
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="app-topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="hamburger" onclick="document.getElementById('sidebar').classList.toggle('open')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="company-switch" onclick="backToCompanies()">
+          <span class="code" id="switchCode">—</span>
+          <b id="switchName">—</b>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <div class="topbar-user">
+        <span class="sync-badge" id="syncBadgeApp" onclick="retrySyncIfError()">Not connected</span>
+        <div class="userinfo" onclick="editDisplayName()" style="cursor:pointer;" title="Click to set your display name">
+          <b id="appUserName">—</b>
+          <span>Click to set your name</span>
+        </div>
+        <div class="avatar" id="appUserAvatar">—</div>
+      </div>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<!-- ===================== SUPPLIER MODAL ===================== -->
+<div class="modal-overlay" id="supplierModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h3 id="modalTitle">Add New Supplier</h3>
+        <p>Fill in supplier details for the active company.</p>
+      </div>
+      <button class="modal-close" onclick="closeSupplierModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field">
+          <label>Supplier ID Code</label>
+          <input id="f-kode" class="mono" placeholder="SUP-0001">
+        </div>
+        <div class="field">
+          <label>Supplier Name</label>
+          <input id="f-nama" placeholder="Global Supply Co.">
+        </div>
+        <div class="field span-2">
+          <label>Business Category</label>
+          <div class="cat-row">
+            <select id="f-kategori"></select>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="promptNewCategory()">+ Category</button>
+          </div>
+        </div>
+        <div class="field span-2">
+          <label>Address</label>
+          <textarea id="f-alamat" placeholder="Full office / warehouse address"></textarea>
+        </div>
+        <div class="field">
+          <label>Phone Number</label>
+          <input id="f-telepon" placeholder="+62 21 555 0123">
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input id="f-email" type="email" placeholder="procurement@supplier.com">
+        </div>
+        <div class="field">
+          <label>PIC (Person in Charge)</label>
+          <input id="f-pic" placeholder="Contact person name">
+        </div>
+        <div class="field">
+          <label>Payment Term</label>
+          <select id="f-payment">
+            <option>COD</option>
+            <option>Net 7</option>
+            <option>Net 14</option>
+            <option selected>Net 30</option>
+            <option>Net 45</option>
+            <option>Net 60</option>
+            <option>Net 90</option>
+            <option>Advance Payment</option>
+          </select>
+        </div>
+        <div class="field span-2">
+          <div class="toggle-row">
+            <div>
+              <div class="t-label">Active Status</div>
+              <div class="t-sub">Inactive suppliers won't appear when selecting a new vendor.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="f-status" checked>
+              <span class="track"></span>
+              <span class="thumb"></span>
+            </label>
+          </div>
+        </div>
+        <div class="field span-2">
+          <label>Notes (optional)</label>
+          <textarea id="f-catatan" placeholder="Internal notes, relationship history, etc."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span class="mono" style="font-size:11px;color:var(--text-muted);" id="modalMeta"></span>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-ghost" onclick="closeSupplierModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveSupplier()">Save Supplier</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== NEW COMPANY MODAL ===================== -->
+<div class="modal-overlay" id="companyModal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-head">
+      <div>
+        <h3>Add Company</h3>
+        <p>Set up a new procurement workspace.</p>
+      </div>
+      <button class="modal-close" onclick="closeCompanyModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Company Name</label>
+        <input id="c-nama" placeholder="Northbridge Industries Ltd.">
+      </div>
+      <div class="field">
+        <label>Company Code</label>
+        <input id="c-kode" class="mono" placeholder="NBI" maxlength="8">
+      </div>
+      <div class="field">
+        <label>Industry</label>
+        <input id="c-industri" placeholder="e.g. Manufacturing, Construction, F&amp;B">
+      </div>
+      <div class="field">
+        <label>Head Office Address</label>
+        <textarea id="c-alamat" placeholder="Full address"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot" style="justify-content:flex-end;">
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-ghost" onclick="closeCompanyModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveCompany()">Create Company</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== USER MODAL ===================== -->
+<div class="modal-overlay" id="userModal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-head">
+      <div>
+        <h3 id="userModalTitle">Add User</h3>
+        <p>Set the user's name, password, photo, and access rights.</p>
+      </div>
+      <button class="modal-close" onclick="closeUserModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="photo-upload">
+        <div class="photo-preview" id="u-photo-preview">FT</div>
+        <div class="photo-upload-actions">
+          <label class="btn btn-ghost btn-sm" for="u-photo-input">Upload Photo</label>
+          <input type="file" id="u-photo-input" accept="image/*" onchange="handlePhotoUpload(event)">
+          <button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="removePhoto()">Remove Photo</button>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="field span-2">
+          <label>Full Name</label>
+          <input id="u-nama" placeholder="User's full name">
+        </div>
+        <div class="field">
+          <label>Username / Login ID</label>
+          <input id="u-username" class="mono" placeholder="e.g. john.doe">
+        </div>
+        <div class="field">
+          <label>Access Role</label>
+          <select id="u-role">
+            <option>Administrator</option>
+            <option selected>Head of Procurement</option>
+            <option>Staff Procurement</option>
+            <option>Finance</option>
+            <option>Viewer</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input id="u-password" type="password" placeholder="Create password">
+        </div>
+        <div class="field">
+          <label>Confirm Password</label>
+          <input id="u-password2" type="password" placeholder="Repeat password">
+        </div>
+        <div class="field span-2">
+          <label>Company Access</label>
+          <div class="access-list" id="u-access-list"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot" style="justify-content:flex-end;">
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-ghost" onclick="closeUserModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveUser()">Save User</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== ITEM MODAL ===================== -->
+<div class="modal-overlay" id="itemModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h3 id="itemModalTitle">Add Item</h3>
+        <p>Item master details, with an optional starting price.</p>
+      </div>
+      <button class="modal-close" onclick="closeItemModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field">
+          <label>Category</label>
+          <select id="it-category"></select>
+        </div>
+        <div class="field">
+          <label>Item Name</label>
+          <input id="it-nama" placeholder="e.g. Hot Runner Controller 2 Zone">
+        </div>
+        <div class="field">
+          <label>Brand (optional)</label>
+          <input id="it-brand" placeholder="e.g. Yudo">
+        </div>
+        <div class="field">
+          <label>Remarks</label>
+          <input id="it-remarks" placeholder="e.g. Model CW201">
+        </div>
+      </div>
+      <div class="section-label">Reference price (optional — updates automatically after every comparison)</div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Amount</label>
+          <input id="it-price" type="number" min="0" step="0.01" placeholder="0">
+        </div>
+        <div class="field">
+          <label>Currency</label>
+          <div class="cat-row">
+            <select id="it-currency"></select>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="promptNewItemCurrency()">+ Currency</button>
+          </div>
+        </div>
+        <div class="field span-2">
+          <label>Supplier</label>
+          <select id="it-supplier"></select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot" style="justify-content:flex-end;">
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-ghost" onclick="closeItemModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveItem()">Save Item</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== ITEM PRICE HISTORY MODAL ===================== -->
+<div class="modal-overlay" id="itemHistoryModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h3>Price History</h3>
+        <p id="historyItemName">—</p>
+      </div>
+      <button class="modal-close" onclick="closeItemHistoryModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="table-wrap"><div class="table-scroll">
+        <table>
+          <thead><tr><th>Date</th><th>Supplier</th><th>Price</th><th>Source</th></tr></thead>
+          <tbody id="historyTableBody"></tbody>
+        </table>
+      </div></div>
+    </div>
+    <div class="modal-foot" style="justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="closeItemHistoryModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>
+  <span id="toastMsg">Saved</span>
+</div>
+
+<script>
+/* ============================================================
+   This app runs as a Google Apps Script Web App, deployed to run
+   "as me" (the Google account that deployed it). That means anyone
+   who opens the web app URL can use it WITHOUT signing in
+   themselves — all Google Drive access happens server-side under
+   the deploying account. See Code.gs for the server-side logic;
+   all data lives in a single JSON file in that account's Drive.
+   ============================================================ */
+
+/* ============ ICONS ============ */
+const ICONS = {
+  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+  building: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="1"/><line x1="9" y1="7" x2="9" y2="7"/><line x1="15" y1="7" x2="15" y2="7"/><line x1="9" y1="12" x2="9" y2="12"/><line x1="15" y1="12" x2="15" y2="12"/><line x1="9" y1="17" x2="15" y2="17"/></svg>',
+  users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  tag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 4H4v7l9.59 9.59a2 2 0 0 0 2.82 0l4.18-4.18a2 2 0 0 0 0-2.82Z"/><circle cx="7.5" cy="7.5" r="1"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>',
+  history: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>'
+};
+
+/* ============ STATE (in-memory demo data) ============ */
+let state = {
+  user: { name: 'Team Member' },
+  companies: [
+    {id:'c1', kode:'NIP', nama:'PT Nusantara Industri Prima', industri:'Heavy Equipment Manufacturing', alamat:'MM2100 Industrial Estate, Cikarang, West Java, Indonesia'},
+    {id:'c2', kode:'SLG', nama:'PT Sinar Logistik Global', industri:'Logistics & Distribution', alamat:'Jl. Yos Sudarso No. 45, Tanjung Priok, North Jakarta, Indonesia'}
+  ],
+  categories: ['Raw Materials','Services','Heavy Equipment & Machinery','IT & Electronics','Logistics & Distribution','MRO (Maintenance)','Construction','Office Supplies','Other'],
+  suppliers: [
+    {id:'s1', companyId:'c1', kode:'SUP-0001', nama:'PT Baja Sentosa Abadi', kategori:'Raw Materials', alamat:'Jl. Industri Raya No.12, Bekasi, Indonesia', telepon:'+62 21 8880 1122', email:'sales@bajasentosa.co.id', pic:'Andri Wibowo', payment:'Net 30', status:true, catatan:''},
+    {id:'s2', companyId:'c1', kode:'SUP-0002', nama:'CV Cahaya Elektronik', kategori:'IT & Electronics', alamat:'Ruko Mangga Dua Block C2, Jakarta, Indonesia', telepon:'+62 21 6123 4455', email:'cs@cahayaelektronik.id', pic:'Sinta Dewi', payment:'Net 14', status:true, catatan:'Annual contract renewed every January'},
+    {id:'s3', companyId:'c1', kode:'SUP-0003', nama:'PT Karya Konstruksi Mandiri', kategori:'Construction', alamat:'Jl. Sudirman Kav. 9, Bandung, Indonesia', telepon:'+62 22 4211 7788', email:'info@karyakonstruksi.co.id', pic:'Budi Santoso', payment:'Net 60', status:false, catatan:''},
+    {id:'s4', companyId:'c2', kode:'SUP-0001', nama:'PT Armada Trans Nusantara', kategori:'Logistics & Distribution', alamat:'Jl. Raya Priok No. 88, North Jakarta, Indonesia', telepon:'+62 21 4390 2211', email:'ops@armadatrans.co.id', pic:'Rudi Hartono', payment:'Net 30', status:true, catatan:''}
+  ],
+  users: [
+    {id:'u1', nama:'Haris Pratama', username:'haris.pratama', role:'Administrator', password:'demo123', foto:null, companyAccess:['c1','c2']},
+    {id:'u2', nama:'Dewi Anggraini', username:'dewi.anggraini', role:'Staff Procurement', password:'demo123', foto:null, companyAccess:['c1']}
+  ],
+  categoriesItem: ['General','Sparepart','Subcon','Raw Material'],
+  currencies: ['IDR','USD','SGD'],
+  items: [
+    {id:'i1', companyId:'c1', category:'Sparepart', nama:'Hot Runner Controller 2 Zone', brand:'', remarks:'Model CW201', lastPrice:{amount:440, currency:'USD', supplierId:'s2', date:'2026-07'}, priceHistory:[{date:'2026-07', supplierId:'s2', price:440, currency:'USD', comparisonTitle:'Initial data'}]},
+    {id:'i2', companyId:'c1', category:'Raw Material', nama:'Hydraulic Oil ISO 46', brand:'Shell', remarks:'', lastPrice:{amount:850000, currency:'IDR', supplierId:'s1', date:'2026-06'}, priceHistory:[{date:'2026-06', supplierId:'s1', price:850000, currency:'IDR', comparisonTitle:'Initial data'}]},
+    {id:'i3', companyId:'c1', category:'Sparepart', nama:'Bearing 6205ZZ', brand:'SKF', remarks:'', lastPrice:{amount:12, currency:'USD', supplierId:'s2', date:'2026-06'}, priceHistory:[{date:'2026-06', supplierId:'s2', price:12, currency:'USD', comparisonTitle:'Initial data'}]},
+    {id:'i4', companyId:'c1', category:'Subcon', nama:'Structural Frame Welding Service', brand:'', remarks:'Per unit frame', lastPrice:{amount:3200000, currency:'IDR', supplierId:'s3', date:'2026-05'}, priceHistory:[{date:'2026-05', supplierId:'s3', price:3200000, currency:'IDR', comparisonTitle:'Initial data'}]},
+    {id:'i5', companyId:'c1', category:'General', nama:'Office Paper A4', brand:'PaperOne', remarks:'', lastPrice:null, priceHistory:[]},
+    {id:'i6', companyId:'c1', category:'Raw Material', nama:'Steel Plate 10mm', brand:'', remarks:'1200x2400mm', lastPrice:null, priceHistory:[]}
+  ],
+  comparisons: [],
+  currentCompanyId: null,
+  activeMenu: 'dashboard',
+  editingSupplierId: null,
+  editingUserId: null,
+  editingItemId: null,
+  editingComparisonId: null,
+  comparisonMode: 'list',
+  draftComparison: null,
+  tempPhoto: null,
+  filters: {search:'', kategori:''},
+  itemFilters: {search:'', category:''}
+};
+
+/* ============ HELPERS ============ */
+function toast(msg){
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(()=>t.classList.remove('show'), 2400);
+}
+function initials(name){
+  return name.trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+}
+function currentCompany(){
+  return state.companies.find(c=>c.id===state.currentCompanyId);
+}
+function companySuppliers(){
+  return state.suppliers.filter(s=>s.companyId===state.currentCompanyId);
+}
+
+/* ============ GOOGLE APPS SCRIPT SYNC (via fetch, app hosted on GitHub Pages) ============ */
+// Paste the Web App URL you get after deploying Code.gs in Apps Script
+// (Deploy → New deployment → Web app). It looks like:
+// https://script.google.com/macros/s/AKfycb.../exec
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxex3gWBwtl7HQJ0NZeFJwRKz0tW28QM2IsmIL2SOq2tYjsaBMOTi_IMQooy1A706HD/exec';
+
+let syncStatus = 'idle'; // idle | syncing | synced | error
+let saveTimer = null;
+
+window.addEventListener('load', async () => {
+  updateUserUI();
+  showView('companies');
+  if(APPS_SCRIPT_URL.startsWith('YOUR_')){
+    setSyncStatus('error');
+    toast('Set APPS_SCRIPT_URL in the code first — see the setup notes.');
+    renderCompanies();
+    return;
+  }
+  await loadFromServer();
+  renderCompanies();
+});
+
+async function loadFromServer(){
+  setSyncStatus('syncing');
+  try{
+    const res = await fetch(APPS_SCRIPT_URL + '?action=getData');
+    if(!res.ok) throw new Error('Request failed: ' + res.status);
+    const json = await res.json();
+    if(json && typeof json === 'object'){
+      state.companies = json.companies || state.companies;
+      state.suppliers = json.suppliers || state.suppliers;
+      state.users = json.users || state.users;
+      state.categories = json.categories || state.categories;
+      state.items = json.items || state.items;
+      state.comparisons = json.comparisons || state.comparisons;
+      state.currencies = json.currencies || state.currencies;
+      state.categoriesItem = json.categoriesItem || state.categoriesItem;
+    }
+    setSyncStatus('synced');
+  } catch(err){
+    console.error(err);
+    setSyncStatus('error');
+    toast('Could not load data from Google Drive. Try Refresh.');
+  }
+}
+
+async function refreshFromServer(){
+  await loadFromServer();
+  if(state.currentCompanyId){ renderContent(); } else { renderCompanies(); }
+  toast('Data refreshed from Drive');
+}
+
+function updateUserUI(){
+  const name = state.user ? state.user.name : 'Team Member';
+  document.getElementById('topUserName').textContent = name;
+  document.getElementById('appUserName').textContent = name;
+  const avatarHTML = initials(name);
+  document.getElementById('topUserAvatar').innerHTML = avatarHTML;
+  document.getElementById('appUserAvatar').innerHTML = avatarHTML;
+}
+function editDisplayName(){
+  const val = prompt('Your name (just for display on this device — not a login):', state.user.name);
+  if(val && val.trim()){
+    state.user.name = val.trim();
+    updateUserUI();
+  }
+}
+
+function snapshotData(){
+  return {
+    companies: state.companies,
+    suppliers: state.suppliers,
+    users: state.users,
+    categories: state.categories,
+    items: state.items,
+    comparisons: state.comparisons,
+    currencies: state.currencies,
+    categoriesItem: state.categoriesItem,
+    savedAt: new Date().toISOString()
+  };
+}
+
+function scheduleSave(){
+  if(APPS_SCRIPT_URL.startsWith('YOUR_')) return;
+  setSyncStatus('syncing');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveToServer, 900);
+}
+
+async function saveToServer(){
+  try{
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids a CORS preflight
+      body: JSON.stringify(snapshotData())
+    });
+    if(!res.ok) throw new Error('Request failed: ' + res.status);
+    const result = await res.json();
+    if(!result.success) throw new Error(result.error || 'Save failed');
+    setSyncStatus('synced');
+  } catch(err){
+    console.error(err);
+    setSyncStatus('error');
+  }
+}
+
+function retrySyncIfError(){
+  if(syncStatus === 'error') saveToServer();
+}
+
+function setSyncStatus(s){
+  syncStatus = s;
+  const label = { idle:'Not connected', syncing:'Syncing…', synced:'Synced to Drive', error:'Sync error — click to retry' }[s] || '';
+  document.querySelectorAll('.sync-badge').forEach(el=>{
+    el.className = 'sync-badge sync-' + s;
+    el.textContent = label;
+  });
+}
+
+/* ============ VIEW SWITCH ============ */
+function showView(name){
+  document.getElementById('view-companies').style.display = name==='companies' ? 'block':'none';
+  document.getElementById('view-app').style.display = name==='app' ? 'flex':'none';
+}
+
+/* ============ COMPANIES ============ */
+function renderCompanies(){
+  const grid = document.getElementById('companyGrid');
+  grid.innerHTML = state.companies.map(c=>{
+    const n = state.suppliers.filter(s=>s.companyId===c.id).length;
+    return `<div class="company-card" onclick="enterCompany('${c.id}')">
+      <button class="del-btn btn-icon" onclick="event.stopPropagation(); deleteCompany('${c.id}')" title="Delete company">${ICONS.trash}</button>
+      <span class="code">${c.kode}</span>
+      <h3>${c.nama}</h3>
+      <p>${c.industri || 'Industry not set'}</p>
+      <div class="meta"><span>${n} supplier</span><span>${ICONS.building}</span></div>
+    </div>`;
+  }).join('') + `<div class="company-card-add" onclick="openCompanyModal()">${ICONS.plus}<span>Add Company</span></div>`;
+}
+function enterCompany(id){
+  state.currentCompanyId = id;
+  const c = currentCompany();
+  document.getElementById('switchCode').textContent = c.kode;
+  document.getElementById('switchName').textContent = c.nama;
+  showView('app');
+  navigate('dashboard');
+}
+function backToCompanies(){
+  state.currentCompanyId = null;
+  document.getElementById('sidebar').classList.remove('open');
+  showView('companies');
+  renderCompanies();
+}
+function deleteCompany(id){
+  const c = state.companies.find(x=>x.id===id);
+  if(!c) return;
+  if(!confirm(`Delete company "${c.nama}" along with all its supplier data?`)) return;
+  const wasCurrent = state.currentCompanyId === id;
+  state.companies = state.companies.filter(x=>x.id!==id);
+  state.suppliers = state.suppliers.filter(x=>x.companyId!==id);
+  state.users.forEach(u => u.companyAccess = u.companyAccess.filter(cid=>cid!==id));
+  toast('Company deleted');
+  scheduleSave();
+  if(wasCurrent){
+    state.currentCompanyId = null;
+    backToCompanies();
+  } else if(document.getElementById('view-companies').style.display!=='none'){
+    renderCompanies();
+  } else if(document.getElementById('view-app').style.display!=='none'){
+    renderContent();
+  }
+}
+function openCompanyModal(){
+  ['c-nama','c-kode','c-industri','c-alamat'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('companyModal').classList.add('open');
+}
+function closeCompanyModal(){ document.getElementById('companyModal').classList.remove('open'); }
+function saveCompany(){
+  const nama = document.getElementById('c-nama').value.trim();
+  const kode = document.getElementById('c-kode').value.trim().toUpperCase();
+  if(!nama || !kode){ toast('Company name and code are required'); return; }
+  state.companies.push({
+    id:'c'+Date.now(), kode, nama,
+    industri: document.getElementById('c-industri').value.trim(),
+    alamat: document.getElementById('c-alamat').value.trim()
+  });
+  closeCompanyModal();
+  renderCompanies();
+  toast('Company created');
+  scheduleSave();
+}
+
+/* ============ NAVIGATION ============ */
+function toggleProcurementMenu(){
+  document.getElementById('procurementSub').style.display =
+    document.getElementById('procurementSub').style.display==='none' ? 'block':'none';
+}
+const NAV_MAP = {
+  'dashboard':'nav-dashboard',
+  'master-supplier':'nav-master-supplier',
+  'item-master':'nav-item-master',
+  'comparison':'nav-comparison',
+  'company-management':'nav-company-management',
+  'user-management':'nav-user-management'
+};
+function navigate(menu){
+  state.activeMenu = menu;
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  const target = document.getElementById(NAV_MAP[menu]);
+  if(target) target.classList.add('active');
+  document.getElementById('sidebar').classList.remove('open');
+  renderContent();
+}
+function renderContent(){
+  const el = document.getElementById('content');
+  if(state.activeMenu==='dashboard') el.innerHTML = dashboardHTML();
+  else if(state.activeMenu==='master-supplier'){ el.innerHTML = masterSupplierHTML(); bindSupplierEvents(); }
+  else if(state.activeMenu==='item-master'){ el.innerHTML = itemMasterHTML(); bindItemEvents(); }
+  else if(state.activeMenu==='comparison'){ el.innerHTML = comparisonHTML(); }
+  else if(state.activeMenu==='company-management'){ el.innerHTML = companyManagementHTML(); }
+  else if(state.activeMenu==='user-management'){ el.innerHTML = userManagementHTML(); }
+}
+
+/* ============ DASHBOARD ============ */
+function dashboardHTML(){
+  const list = companySuppliers();
+  const active = list.filter(s=>s.status).length;
+  const cats = new Set(list.map(s=>s.kategori)).size;
+  const itemsCount = companyItems().length;
+  const comparisonsCount = state.comparisons.filter(x=>x.companyId===state.currentCompanyId).length;
+  const c = currentCompany();
+  return `
+    <div class="page-head">
+      <div>
+        <div class="eyebrow">Overview</div>
+        <h2>Dashboard — ${c.nama}</h2>
+        <p>Overview of procurement activity for this company.</p>
+      </div>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="label">Total Suppliers ${ICONS.users}</div><div class="value">${list.length}</div><div class="sub">registered in master data</div></div>
+      <div class="kpi-card"><div class="label">Active Suppliers ${ICONS.check}</div><div class="value">${active}</div><div class="sub">ready for transactions</div></div>
+      <div class="kpi-card"><div class="label">Items Registered ${ICONS.tag}</div><div class="value">${itemsCount}</div><div class="sub">in item master</div></div>
+      <div class="kpi-card"><div class="label">Comparisons Saved ${ICONS.history}</div><div class="value">${comparisonsCount}</div><div class="sub">price comparisons on record</div></div>
+      <div class="kpi-card"><div class="label">Business Categories ${ICONS.tag}</div><div class="value">${cats}</div><div class="sub">distinct categories recorded</div></div>
+      <div class="kpi-card"><div class="label">Registered Companies ${ICONS.building}</div><div class="value">${state.companies.length}</div><div class="sub">workspaces available</div></div>
+    </div>
+    <div class="welcome-panel">
+      <div class="stamp">${ICONS.check}<span>PROCURE</span></div>
+      <div>
+        <h3>Welcome back, ${state.user ? state.user.name : ''}.</h3>
+        <p>Start with Master Supplier to make sure vendor data is complete and accurate before processing purchase requests.</p>
+      </div>
+    </div>`;
+}
+
+/* ============ MASTER SUPPLIER ============ */
+function categoryOptions(selected){
+  return `<option value="">All categories</option>` + state.categories.map(c=>
+    `<option value="${c}" ${c===selected?'selected':''}>${c}</option>`).join('');
+}
+function masterSupplierHTML(){
+  const c = currentCompany();
+  let list = companySuppliers();
+  if(state.filters.search){
+    const q = state.filters.search.toLowerCase();
+    list = list.filter(s => s.nama.toLowerCase().includes(q) || s.kode.toLowerCase().includes(q) || s.pic.toLowerCase().includes(q));
+  }
+  if(state.filters.kategori) list = list.filter(s=>s.kategori===state.filters.kategori);
+
+  const rows = list.map(s=>`
+    <tr>
+      <td class="code">${s.kode}</td>
+      <td>
+        <div class="name-cell"><b>${s.nama}</b><span>${s.email || 'Email not set'}</span></div>
+      </td>
+      <td><span class="badge">${s.kategori}</span></td>
+      <td>${s.pic || '—'}</td>
+      <td>${s.telepon || '—'}</td>
+      <td class="mono" style="font-size:12.5px;">${s.payment}</td>
+      <td><span class="status-dot ${s.status?'':'inactive'}">${s.status?'Active':'Inactive'}</span></td>
+      <td>
+        <div class="row-actions">
+          <button onclick="editSupplier('${s.id}')" title="Edit">${ICONS.edit}</button>
+          <button class="del" onclick="deleteSupplier('${s.id}')" title="Delete">${ICONS.trash}</button>
+        </div>
+      </td>
+    </tr>`).join('');
+
+  const tableOrEmpty = list.length ? `
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>ID Code</th><th>Supplier Name</th><th>Business Category</th><th>PIC</th><th>Phone Number</th><th>Payment Term</th><th>Status</th><th></th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>` : `
+    <div class="table-wrap">
+      <div class="empty-state">
+        <div class="stamp">${ICONS.tag}<span>EMPTY</span></div>
+        <h3>No suppliers yet</h3>
+        <p>${companySuppliers().length ? 'No suppliers match your search or filter.' : 'Add the first supplier for this company.'}</p>
+        <button class="btn btn-primary btn-sm" onclick="openSupplierModal()">${ICONS.plus} Add Supplier</button>
+      </div>
+    </div>`;
+
+  return `
+    <div class="page-head">
+      <div>
+        <div class="eyebrow">Procurement</div>
+        <h2>Master Supplier</h2>
+        <p>Manage vendor data for ${c.nama} — ${companySuppliers().length} suppliers registered.</p>
+      </div>
+      <button class="btn btn-primary" onclick="openSupplierModal()">${ICONS.plus} Add Supplier</button>
+    </div>
+    <div class="toolbar">
+      <div class="search-box">${ICONS.search}<input id="supplierSearch" placeholder="Search name, code, or PIC..." value="${state.filters.search}"></div>
+      <select class="filter-select" id="categoryFilter">${categoryOptions(state.filters.kategori)}</select>
+      <div class="spacer"></div>
+    </div>
+    ${tableOrEmpty}`;
+}
+function bindSupplierEvents(){
+  const s = document.getElementById('supplierSearch');
+  const f = document.getElementById('categoryFilter');
+  if(s) s.addEventListener('input', e=>{ state.filters.search = e.target.value; renderContent(); preserveFocus('supplierSearch'); });
+  if(f) f.addEventListener('change', e=>{ state.filters.kategori = e.target.value; renderContent(); });
+}
+function preserveFocus(id){
+  const el = document.getElementById(id);
+  if(el){ el.focus(); const v = el.value; el.value=''; el.value=v; }
+}
+
+function nextSupplierCode(){
+  const list = companySuppliers();
+  const n = list.length + 1;
+  return 'SUP-' + String(n).padStart(4,'0');
+}
+function openSupplierModal(){
+  state.editingSupplierId = null;
+  document.getElementById('modalTitle').textContent = 'Add New Supplier';
+  document.getElementById('modalMeta').textContent = '';
+  document.getElementById('f-kode').value = nextSupplierCode();
+  document.getElementById('f-nama').value = '';
+  document.getElementById('f-kategori').innerHTML = state.categories.map(c=>`<option>${c}</option>`).join('');
+  document.getElementById('f-alamat').value = '';
+  document.getElementById('f-telepon').value = '';
+  document.getElementById('f-email').value = '';
+  document.getElementById('f-pic').value = '';
+  document.getElementById('f-payment').value = 'Net 30';
+  document.getElementById('f-status').checked = true;
+  document.getElementById('f-catatan').value = '';
+  document.getElementById('supplierModal').classList.add('open');
+}
+function editSupplier(id){
+  const s = state.suppliers.find(x=>x.id===id);
+  if(!s) return;
+  state.editingSupplierId = id;
+  document.getElementById('modalTitle').textContent = 'Edit Supplier';
+  document.getElementById('modalMeta').textContent = 'ID: ' + s.id;
+  document.getElementById('f-kode').value = s.kode;
+  document.getElementById('f-nama').value = s.nama;
+  document.getElementById('f-kategori').innerHTML = state.categories.map(c=>`<option ${c===s.kategori?'selected':''}>${c}</option>`).join('');
+  document.getElementById('f-alamat').value = s.alamat;
+  document.getElementById('f-telepon').value = s.telepon;
+  document.getElementById('f-email').value = s.email;
+  document.getElementById('f-pic').value = s.pic;
+  document.getElementById('f-payment').value = s.payment;
+  document.getElementById('f-status').checked = s.status;
+  document.getElementById('f-catatan').value = s.catatan || '';
+  document.getElementById('supplierModal').classList.add('open');
+}
+function closeSupplierModal(){ document.getElementById('supplierModal').classList.remove('open'); }
+function promptNewCategory(){
+  const val = prompt('New business category name:');
+  if(val && val.trim()){
+    const clean = val.trim();
+    if(!state.categories.includes(clean)) state.categories.push(clean);
+    const sel = document.getElementById('f-kategori');
+    sel.innerHTML = state.categories.map(c=>`<option ${c===clean?'selected':''}>${c}</option>`).join('');
+  }
+}
+function saveSupplier(){
+  const nama = document.getElementById('f-nama').value.trim();
+  const kode = document.getElementById('f-kode').value.trim();
+  if(!nama || !kode){ toast('Supplier code and name are required'); return; }
+  const data = {
+    kode, nama,
+    kategori: document.getElementById('f-kategori').value,
+    alamat: document.getElementById('f-alamat').value.trim(),
+    telepon: document.getElementById('f-telepon').value.trim(),
+    email: document.getElementById('f-email').value.trim(),
+    pic: document.getElementById('f-pic').value.trim(),
+    payment: document.getElementById('f-payment').value,
+    status: document.getElementById('f-status').checked,
+    catatan: document.getElementById('f-catatan').value.trim()
+  };
+  if(state.editingSupplierId){
+    const s = state.suppliers.find(x=>x.id===state.editingSupplierId);
+    Object.assign(s, data);
+    toast('Supplier changes saved');
+  } else {
+    state.suppliers.push(Object.assign({id:'s'+Date.now(), companyId: state.currentCompanyId}, data));
+    toast('Supplier added');
+  }
+  closeSupplierModal();
+  renderContent();
+  scheduleSave();
+}
+function deleteSupplier(id){
+  const s = state.suppliers.find(x=>x.id===id);
+  if(!confirm(`Delete supplier "${s.nama}" (${s.kode})?`)) return;
+  state.suppliers = state.suppliers.filter(x=>x.id!==id);
+  renderContent();
+  toast('Supplier deleted');
+  scheduleSave();
+}
+
+/* ============ SHARED HELPERS (items + comparison) ============ */
+function companyItems(){
+  return state.items.filter(i=>i.companyId===state.currentCompanyId);
+}
+function itemCategoryOptions(selected){
+  return state.categoriesItem.map(c=>`<option value="${c}" ${c===selected?'selected':''}>${c}</option>`).join('');
+}
+function currencyOptions(selected){
+  return state.currencies.map(c=>`<option value="${c}" ${c===selected?'selected':''}>${c}</option>`).join('');
+}
+function formatMoney(amount, currency){
+  if(amount===null || amount===undefined || amount==='') return '—';
+  const n = Number(amount);
+  return currency + ' ' + n.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:2});
+}
+function currentMonthValue(){
+  return new Date().toISOString().slice(0,7);
+}
+
+/* ============ ITEM MASTER ============ */
+function itemMasterHTML(){
+  const c = currentCompany();
+  let list = companyItems();
+  if(state.itemFilters.search){
+    const q = state.itemFilters.search.toLowerCase();
+    list = list.filter(i => i.nama.toLowerCase().includes(q) || (i.brand||'').toLowerCase().includes(q));
+  }
+  if(state.itemFilters.category) list = list.filter(i=>i.category===state.itemFilters.category);
+
+  const tabs = ['', ...state.categoriesItem].map(cat=>{
+    const label = cat === '' ? 'All' : cat;
+    const active = state.itemFilters.category === cat;
+    return `<button type="button" class="tab-pill ${active?'active':''}" onclick="setItemCategoryFilter('${cat}')">${label}</button>`;
+  }).join('');
+
+  const rows = list.map(i=>{
+    const priceLabel = i.lastPrice ? formatMoney(i.lastPrice.amount, i.lastPrice.currency) : 'No price yet';
+    const supplier = i.lastPrice ? state.suppliers.find(s=>s.id===i.lastPrice.supplierId) : null;
+    return `<tr>
+      <td><div class="name-cell"><b>${i.nama}</b><span>${i.brand || 'No brand'}</span></div></td>
+      <td><span class="badge">${i.category}</span></td>
+      <td class="mono">${priceLabel}</td>
+      <td>${supplier ? supplier.nama : '—'}</td>
+      <td>${i.remarks || '—'}</td>
+      <td>
+        <div class="row-actions">
+          <button onclick="viewItemHistory('${i.id}')" title="Price history">${ICONS.history}</button>
+          <button onclick="editItem('${i.id}')" title="Edit">${ICONS.edit}</button>
+          <button class="del" onclick="deleteItem('${i.id}')" title="Delete">${ICONS.trash}</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const tableOrEmpty = list.length ? `
+    <div class="table-wrap"><div class="table-scroll">
+      <table>
+        <thead><tr><th>Item</th><th>Category</th><th>Last Price</th><th>Last Supplier</th><th>Remarks</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div></div>` : `
+    <div class="table-wrap"><div class="empty-state">
+      <div class="stamp">${ICONS.tag}<span>EMPTY</span></div>
+      <h3>No items yet</h3>
+      <p>${companyItems().length ? 'No items match your search or filter.' : 'Add your first item to start building the item master.'}</p>
+      <button class="btn btn-primary btn-sm" onclick="openItemModal()">${ICONS.plus} Add Item</button>
+    </div></div>`;
+
+  return `
+    <div class="page-head">
+      <div>
+        <div class="eyebrow">Procurement</div>
+        <h2>Item Master</h2>
+        <p>Purchasable items for ${c.nama} — ${companyItems().length} items registered.</p>
+      </div>
+      <button class="btn btn-primary" onclick="openItemModal()">${ICONS.plus} Add Item</button>
+    </div>
+    <div class="tab-bar">${tabs}</div>
+    <div class="toolbar">
+      <div class="search-box">${ICONS.search}<input id="itemSearch" placeholder="Search item name or brand..." value="${state.itemFilters.search}"></div>
+      <div class="spacer"></div>
+    </div>
+    ${tableOrEmpty}`;
+}
+function bindItemEvents(){
+  const s = document.getElementById('itemSearch');
+  if(s) s.addEventListener('input', e=>{ state.itemFilters.search = e.target.value; renderContent(); preserveFocus('itemSearch'); });
+}
+function setItemCategoryFilter(cat){
+  state.itemFilters.category = cat;
+  renderContent();
+}
+function openItemModal(){
+  state.editingItemId = null;
+  document.getElementById('itemModalTitle').textContent = 'Add Item';
+  document.getElementById('it-category').innerHTML = itemCategoryOptions('General');
+  document.getElementById('it-nama').value = '';
+  document.getElementById('it-brand').value = '';
+  document.getElementById('it-remarks').value = '';
+  document.getElementById('it-currency').innerHTML = currencyOptions('IDR');
+  document.getElementById('it-price').value = '';
+  document.getElementById('it-supplier').innerHTML = '<option value="">—</option>' + companySuppliers().map(s=>`<option value="${s.id}">${s.nama}</option>`).join('');
+  document.getElementById('itemModal').classList.add('open');
+}
+function editItem(id){
+  const it = state.items.find(x=>x.id===id);
+  if(!it) return;
+  state.editingItemId = id;
+  document.getElementById('itemModalTitle').textContent = 'Edit Item';
+  document.getElementById('it-category').innerHTML = itemCategoryOptions(it.category);
+  document.getElementById('it-nama').value = it.nama;
+  document.getElementById('it-brand').value = it.brand || '';
+  document.getElementById('it-remarks').value = it.remarks || '';
+  document.getElementById('it-currency').innerHTML = currencyOptions(it.lastPrice ? it.lastPrice.currency : 'IDR');
+  document.getElementById('it-price').value = it.lastPrice ? it.lastPrice.amount : '';
+  document.getElementById('it-supplier').innerHTML = '<option value="">—</option>' + companySuppliers().map(s=>`<option value="${s.id}" ${it.lastPrice && it.lastPrice.supplierId===s.id?'selected':''}>${s.nama}</option>`).join('');
+  document.getElementById('itemModal').classList.add('open');
+}
+function closeItemModal(){ document.getElementById('itemModal').classList.remove('open'); }
+function promptNewItemCurrency(){
+  const val = prompt('New currency code (e.g. EUR):');
+  if(val && val.trim()){
+    const clean = val.trim().toUpperCase();
+    if(!state.currencies.includes(clean)) state.currencies.push(clean);
+    document.getElementById('it-currency').innerHTML = currencyOptions(clean);
+  }
+}
+function saveItem(){
+  const nama = document.getElementById('it-nama').value.trim();
+  if(!nama){ toast('Item name is required'); return; }
+  const category = document.getElementById('it-category').value;
+  const brand = document.getElementById('it-brand').value.trim();
+  const remarks = document.getElementById('it-remarks').value.trim();
+  const priceVal = document.getElementById('it-price').value;
+  const currency = document.getElementById('it-currency').value;
+  const supplierId = document.getElementById('it-supplier').value;
+
+  let item;
+  if(state.editingItemId){
+    item = state.items.find(x=>x.id===state.editingItemId);
+    item.category = category; item.nama = nama; item.brand = brand; item.remarks = remarks;
+  } else {
+    item = { id:'i'+Date.now(), companyId: state.currentCompanyId, category, nama, brand, remarks, lastPrice:null, priceHistory:[] };
+    state.items.push(item);
+  }
+  if(priceVal !== ''){
+    const amount = parseFloat(priceVal) || 0;
+    const date = currentMonthValue();
+    item.lastPrice = { amount, currency, supplierId: supplierId || null, date };
+    item.priceHistory = item.priceHistory || [];
+    item.priceHistory.unshift({ date, supplierId: supplierId || null, price: amount, currency, comparisonTitle:'Manual entry' });
+  }
+  const wasEditing = !!state.editingItemId;
+  closeItemModal();
+  renderContent();
+  toast(wasEditing ? 'Item changes saved' : 'Item added');
+  scheduleSave();
+}
+function deleteItem(id){
+  const it = state.items.find(x=>x.id===id);
+  if(!it) return;
+  if(!confirm(`Delete item "${it.nama}"? Its price history will also be removed.`)) return;
+  state.items = state.items.filter(x=>x.id!==id);
+  renderContent();
+  toast('Item deleted');
+  scheduleSave();
+}
+function viewItemHistory(id){
+  const item = state.items.find(x=>x.id===id);
+  if(!item) return;
+  document.getElementById('historyItemName').textContent = item.nama;
+  const history = (item.priceHistory || []).slice().sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+  const rows = history.map(h=>{
+    const s = state.suppliers.find(x=>x.id===h.supplierId);
+    return `<tr>
+      <td class="mono">${h.date || '—'}</td>
+      <td>${s ? s.nama : '—'}</td>
+      <td class="mono">${formatMoney(h.price, h.currency)}</td>
+      <td>${h.comparisonTitle || 'Manual entry'}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('historyTableBody').innerHTML = history.length ? rows :
+    `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:24px;">No purchase history yet.</td></tr>`;
+  document.getElementById('itemHistoryModal').classList.add('open');
+}
+function closeItemHistoryModal(){ document.getElementById('itemHistoryModal').classList.remove('open'); }
+
+/* ============ COMPARISON ============ */
+function comparisonHTML(){
+  return state.comparisonMode === 'builder' ? comparisonBuilderHTML() : comparisonListHTML();
+}
+function comparisonListHTML(){
+  const c = currentCompany();
+  const list = state.comparisons.filter(x=>x.companyId===state.currentCompanyId).sort((a,b)=> (b.month||'').localeCompare(a.month||''));
+  const rows = list.map(cmp=>{
+    const vendorNames = cmp.vendors.map(v=>{
+      const s = state.suppliers.find(x=>x.id===v.supplierId);
+      return s ? s.nama : '—';
+    }).join(' vs ');
+    const decided = cmp.rows.filter(r=>r.winner!==null && r.winner!==undefined).length;
+    return `<tr>
+      <td class="mono">${cmp.month || '—'}</td>
+      <td><div class="name-cell"><b>${cmp.title}</b><span>${vendorNames}</span></div></td>
+      <td>${cmp.rows.length} item${cmp.rows.length===1?'':'s'}</td>
+      <td>${decided}/${cmp.rows.length} decided</td>
+      <td>
+        <div class="row-actions">
+          <button onclick="editComparison('${cmp.id}')" title="Open">${ICONS.edit}</button>
+          <button class="del" onclick="deleteComparison('${cmp.id}')" title="Delete">${ICONS.trash}</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const tableOrEmpty = list.length ? `
+    <div class="table-wrap"><div class="table-scroll">
+      <table>
+        <thead><tr><th>Month</th><th>Comparison</th><th>Items</th><th>Status</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div></div>` : `
+    <div class="table-wrap"><div class="empty-state">
+      <div class="stamp">${ICONS.history}<span>EMPTY</span></div>
+      <h3>No comparisons yet</h3>
+      <p>Start a comparison to check prices from 2–3 suppliers side by side.</p>
+      <button class="btn btn-primary btn-sm" onclick="startNewComparison()">${ICONS.plus} New Comparison</button>
+    </div></div>`;
+
+  return `
+    <div class="page-head">
+      <div>
+        <div class="eyebrow">Procurement</div>
+        <h2>Comparison</h2>
+        <p>Price comparisons for ${c.nama} — ${list.length} saved.</p>
+      </div>
+      <button class="btn btn-primary" onclick="startNewComparison()">${ICONS.plus} New Comparison</button>
+    </div>
+    ${tableOrEmpty}`;
+}
+function emptyComparisonRow(vendorCount){
+  return { itemId:'', qty:1, remarks:'', perVendor: Array.from({length:vendorCount}, ()=>({unitPrice:0})), winner:null };
+}
+function startNewComparison(){
+  state.editingComparisonId = null;
+  state.draftComparison = {
+    title:'',
+    month: currentMonthValue(),
+    vendors: [ {supplierId:'', currency:'IDR', shippingCost:0}, {supplierId:'', currency:'IDR', shippingCost:0} ],
+    includeShipping: false,
+    rows: [ emptyComparisonRow(2) ]
+  };
+  state.comparisonMode = 'builder';
+  renderContent();
+}
+function editComparison(id){
+  const cmp = state.comparisons.find(x=>x.id===id);
+  if(!cmp) return;
+  state.editingComparisonId = id;
+  state.draftComparison = JSON.parse(JSON.stringify(cmp));
+  state.comparisonMode = 'builder';
+  renderContent();
+}
+function cancelComparisonBuilder(){
+  state.draftComparison = null;
+  state.editingComparisonId = null;
+  state.comparisonMode = 'list';
+  renderContent();
+}
+function deleteComparison(id){
+  const cmp = state.comparisons.find(x=>x.id===id);
+  if(!cmp) return;
+  if(!confirm(`Delete comparison "${cmp.title}"? This won't undo price updates already applied to the item master.`)) return;
+  state.comparisons = state.comparisons.filter(x=>x.id!==id);
+  renderContent();
+  toast('Comparison deleted');
+  scheduleSave();
+}
+function addVendorSlot(){
+  const d = state.draftComparison;
+  if(d.vendors.length >= 3){ toast('Maximum 3 vendors per comparison'); return; }
+  d.vendors.push({supplierId:'', currency:'IDR', shippingCost:0});
+  d.rows.forEach(r=>r.perVendor.push({unitPrice:0}));
+  renderContent();
+}
+function removeVendorSlot(index){
+  const d = state.draftComparison;
+  if(d.vendors.length <= 2){ toast('At least 2 vendors are required'); return; }
+  d.vendors.splice(index,1);
+  d.rows.forEach(r=>{
+    r.perVendor.splice(index,1);
+    if(r.winner === index) r.winner = null;
+    else if(r.winner !== null && r.winner !== undefined && r.winner > index) r.winner -= 1;
+  });
+  renderContent();
+}
+function updateVendorField(index, field, value){
+  state.draftComparison.vendors[index][field] = value;
+  renderContent();
+}
+function updateShippingCost(index, value){
+  state.draftComparison.vendors[index].shippingCost = parseFloat(value) || 0;
+  updateGrandTotals();
+}
+function toggleIncludeShipping(checked){
+  state.draftComparison.includeShipping = checked;
+  renderContent();
+}
+function updateComparisonMeta(field, value){
+  state.draftComparison[field] = value;
+}
+function addComparisonRow(){
+  state.draftComparison.rows.push(emptyComparisonRow(state.draftComparison.vendors.length));
+  renderContent();
+}
+function removeComparisonRow(index){
+  state.draftComparison.rows.splice(index,1);
+  if(!state.draftComparison.rows.length) state.draftComparison.rows.push(emptyComparisonRow(state.draftComparison.vendors.length));
+  renderContent();
+}
+function updateRowItem(rowIndex, itemId){
+  state.draftComparison.rows[rowIndex].itemId = itemId;
+  renderContent();
+}
+function updateRowQty(rowIndex, value){
+  state.draftComparison.rows[rowIndex].qty = parseFloat(value) || 0;
+  updateRowSubtotals(rowIndex);
+  updateGrandTotals();
+}
+function updateRowRemarks(rowIndex, value){
+  state.draftComparison.rows[rowIndex].remarks = value;
+}
+function updatePrice(rowIndex, vIndex, value){
+  state.draftComparison.rows[rowIndex].perVendor[vIndex].unitPrice = parseFloat(value) || 0;
+  updateRowSubtotals(rowIndex);
+  updateGrandTotals();
+}
+function updateRowSubtotals(rowIndex){
+  const row = state.draftComparison.rows[rowIndex];
+  row.perVendor.forEach((pv, vIndex)=>{
+    const el = document.getElementById(`subtotal-${rowIndex}-${vIndex}`);
+    if(el) el.textContent = ((row.qty||0) * (pv.unitPrice||0)).toLocaleString('en-US',{maximumFractionDigits:2});
+  });
+}
+function computeVendorTotal(vIndex){
+  const d = state.draftComparison;
+  let sum = 0;
+  d.rows.forEach(row=>{ sum += (row.qty||0) * (row.perVendor[vIndex]?.unitPrice||0); });
+  if(d.includeShipping) sum += (d.vendors[vIndex]?.shippingCost||0);
+  return sum;
+}
+function updateGrandTotals(){
+  state.draftComparison.vendors.forEach((v, vIndex)=>{
+    const el = document.getElementById(`grandtotal-${vIndex}`);
+    if(el) el.textContent = formatMoney(computeVendorTotal(vIndex), v.currency);
+  });
+}
+function setWinner(rowIndex, vIndex){
+  state.draftComparison.rows[rowIndex].winner = vIndex;
+  document.querySelectorAll(`.win-cell-${rowIndex}`).forEach(el=>el.classList.remove('is-winner'));
+  const cell = document.getElementById(`win-cell-${rowIndex}-${vIndex}`);
+  if(cell) cell.classList.add('is-winner');
+}
+function saveComparison(){
+  const d = state.draftComparison;
+  if(!d.title.trim()){ toast('Comparison title is required'); return; }
+  const validVendors = d.vendors.filter(v=>v.supplierId);
+  if(validVendors.length < 2){ toast('Select at least 2 suppliers to compare'); return; }
+  const validRows = d.rows.filter(r=>r.itemId);
+  if(!validRows.length){ toast('Add at least one item to compare'); return; }
+
+  const record = {
+    id: state.editingComparisonId || 'cmp'+Date.now(),
+    companyId: state.currentCompanyId,
+    title: d.title.trim(),
+    month: d.month,
+    vendors: JSON.parse(JSON.stringify(d.vendors)),
+    includeShipping: d.includeShipping,
+    rows: JSON.parse(JSON.stringify(validRows)),
+    createdAt: new Date().toISOString()
+  };
+
+  if(state.editingComparisonId){
+    const idx = state.comparisons.findIndex(x=>x.id===state.editingComparisonId);
+    state.comparisons[idx] = record;
+  } else {
+    state.comparisons.push(record);
+  }
+
+  record.rows.forEach(row=>{
+    if(row.winner===null || row.winner===undefined) return;
+    const vendor = record.vendors[row.winner];
+    if(!vendor || !vendor.supplierId) return;
+    const item = state.items.find(x=>x.id===row.itemId);
+    if(!item) return;
+    const price = row.perVendor[row.winner]?.unitPrice || 0;
+    item.lastPrice = { amount: price, currency: vendor.currency, supplierId: vendor.supplierId, date: record.month };
+    item.priceHistory = item.priceHistory || [];
+    item.priceHistory.unshift({ date: record.month, supplierId: vendor.supplierId, price, currency: vendor.currency, comparisonTitle: record.title });
+  });
+
+  state.draftComparison = null;
+  state.editingComparisonId = null;
+  state.comparisonMode = 'list';
+  toast('Comparison saved');
+  renderContent();
+  scheduleSave();
+}
+function comparisonBuilderHTML(){
+  const d = state.draftComparison;
+  const items = companyItems();
+  const suppliers = companySuppliers();
+
+  const vendorHeaderCells = d.vendors.map((v,vi)=>`
+    <th colspan="3">
+      <div class="vendor-head">
+        <select onchange="updateVendorField(${vi},'supplierId',this.value)">
+          <option value="">Select supplier…</option>
+          ${suppliers.map(s=>`<option value="${s.id}" ${s.id===v.supplierId?'selected':''}>${s.nama}</option>`).join('')}
+        </select>
+        <select onchange="updateVendorField(${vi},'currency',this.value)">${currencyOptions(v.currency)}</select>
+        ${d.vendors.length>2 ? `<button type="button" class="btn-icon-mini" onclick="removeVendorSlot(${vi})" title="Remove vendor">${ICONS.trash}</button>` : ''}
+      </div>
+    </th>`).join('');
+  const vendorSubHeaderCells = d.vendors.map(()=>`<th>Unit Price</th><th>Sub Total</th><th>Pick</th>`).join('');
+
+  const rowsHTML = d.rows.map((row,ri)=>{
+    const vendorCells = d.vendors.map((v,vi)=>{
+      const subtotal = (row.qty||0) * (row.perVendor[vi]?.unitPrice||0);
+      const isWinner = row.winner===vi;
+      return `
+        <td><input type="number" min="0" step="0.01" value="${row.perVendor[vi]?.unitPrice||0}" oninput="updatePrice(${ri},${vi},this.value)"></td>
+        <td class="mono" id="subtotal-${ri}-${vi}">${subtotal.toLocaleString('en-US',{maximumFractionDigits:2})}</td>
+        <td class="win-cell win-cell-${ri} ${isWinner?'is-winner':''}" id="win-cell-${ri}-${vi}">
+          <input type="radio" name="winner-${ri}" ${isWinner?'checked':''} onchange="setWinner(${ri},${vi})">
+        </td>`;
+    }).join('');
+    return `<tr>
+      <td>
+        <select onchange="updateRowItem(${ri},this.value)">
+          <option value="">Select item…</option>
+          ${items.map(it=>`<option value="${it.id}" ${it.id===row.itemId?'selected':''}>${it.nama} (${it.category})</option>`).join('')}
+        </select>
+      </td>
+      <td><input type="number" min="0" step="1" style="width:64px;" value="${row.qty}" oninput="updateRowQty(${ri},this.value)"></td>
+      <td><input type="text" value="${row.remarks||''}" placeholder="Model/spec note" oninput="updateRowRemarks(${ri},this.value)"></td>
+      ${vendorCells}
+      <td><button type="button" class="btn-icon-mini" onclick="removeComparisonRow(${ri})" title="Remove row">${ICONS.trash}</button></td>
+    </tr>`;
+  }).join('');
+
+  const shippingRow = d.includeShipping ? `
+    <tr class="shipping-row">
+      <td colspan="3" style="text-align:right;font-weight:600;">Estimated shipment cost</td>
+      ${d.vendors.map((v,vi)=>`<td colspan="3"><input type="number" min="0" step="0.01" value="${v.shippingCost||0}" oninput="updateShippingCost(${vi},this.value)"></td>`).join('')}
+      <td></td>
+    </tr>` : '';
+
+  const grandTotalRow = `
+    <tr class="grandtotal-row">
+      <td colspan="3" style="text-align:right;font-weight:700;">Grand Total</td>
+      ${d.vendors.map((v,vi)=>`<td colspan="3" class="mono" id="grandtotal-${vi}" style="font-weight:700;">${formatMoney(computeVendorTotal(vi), v.currency)}</td>`).join('')}
+      <td></td>
+    </tr>`;
+
+  return `
+    <div class="page-head">
+      <div>
+        <div class="eyebrow">Procurement</div>
+        <h2>${state.editingComparisonId ? 'Edit Comparison' : 'New Comparison'}</h2>
+        <p>Compare prices from 2–3 suppliers side by side, then pick the best option per item.</p>
+      </div>
+      <button class="btn btn-ghost" onclick="cancelComparisonBuilder()">Back to list</button>
+    </div>
+    <div class="table-wrap" style="padding:22px;margin-bottom:18px;">
+      <div class="form-grid">
+        <div class="field">
+          <label>Comparison Title</label>
+          <input value="${d.title}" placeholder="e.g. Hot Runner Controllers — July RFQ" oninput="updateComparisonMeta('title',this.value)">
+        </div>
+        <div class="field">
+          <label>Month</label>
+          <input type="month" value="${d.month}" oninput="updateComparisonMeta('month',this.value)">
+        </div>
+      </div>
+      <div style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer;">
+          <input type="checkbox" ${d.includeShipping?'checked':''} onchange="toggleIncludeShipping(this.checked)">
+          Include shipment cost estimate
+        </label>
+        ${d.vendors.length<3 ? `<button type="button" class="btn btn-ghost btn-sm" onclick="addVendorSlot()">${ICONS.plus} Add Vendor</button>` : ''}
+      </div>
+    </div>
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table class="comparison-table">
+          <thead>
+            <tr><th rowspan="2">Item</th><th rowspan="2">Qty</th><th rowspan="2">Remarks</th>${vendorHeaderCells}<th rowspan="2"></th></tr>
+            <tr>${vendorSubHeaderCells}</tr>
+          </thead>
+          <tbody>
+            ${rowsHTML}
+            ${shippingRow}
+            ${grandTotalRow}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div style="margin-top:14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <button type="button" class="btn btn-ghost btn-sm" onclick="addComparisonRow()">${ICONS.plus} Add Item</button>
+      <div style="display:flex;gap:10px;">
+        <button type="button" class="btn btn-ghost" onclick="cancelComparisonBuilder()">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveComparison()">Save Comparison</button>
+      </div>
+    </div>`;
+}
+
+/* ============ KELOLA PERUSAHAAN ============ */
+function companyManagementHTML(){
+  const rows = state.companies.map(c=>{
+    const n = state.suppliers.filter(s=>s.companyId===c.id).length;
+    return `<tr>
+      <td class="code">${c.kode}</td>
+      <td><div class="name-cell"><b>${c.nama}</b><span>${c.industri || 'Industry not set'}</span></div></td>
+      <td>${n} supplier</td>
+      <td>
+        <div class="row-actions">
+          <button onclick="enterCompany('${c.id}')" title="Open company">${ICONS.check}</button>
+          <button class="del" onclick="deleteCompany('${c.id}')" title="Delete company">${ICONS.trash}</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+  const tableOrEmpty = state.companies.length ? `
+    <div class="table-wrap"><div class="table-scroll">
+      <table>
+        <thead><tr><th>Code</th><th>Company Name</th><th>Supplier Data</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div></div>` : `
+    <div class="table-wrap"><div class="empty-state">
+      <div class="stamp">${ICONS.building}<span>EMPTY</span></div>
+      <h3>No companies yet</h3>
+      <p>Add your first company to start managing procurement.</p>
+      <button class="btn btn-primary btn-sm" onclick="openCompanyModal()">${ICONS.plus} Add Company</button>
+    </div></div>`;
+  return `
+    <div class="page-head">
+      <div>
+        <div class="eyebrow">Settings</div>
+        <h2>Manage Companies</h2>
+        <p>Add or remove companies registered in this workspace.</p>
+      </div>
+      <button class="btn btn-primary" onclick="openCompanyModal()">${ICONS.plus} Add Company</button>
+    </div>
+    ${tableOrEmpty}`;
+}
+
+/* ============ MANAJEMEN PENGGUNA ============ */
+function userManagementHTML(){
+  const rows = state.users.map(u=>{
+    const accessNames = u.companyAccess.map(id=>{
+      const c = state.companies.find(x=>x.id===id);
+      return c ? c.kode : null;
+    }).filter(Boolean);
+    const photoHTML = u.foto ? `<img src="${u.foto}" alt="">` : initials(u.nama);
+    return `<tr>
+      <td><div class="table-avatar">${photoHTML}</div></td>
+      <td><div class="name-cell"><b>${u.nama}</b><span>@${u.username}</span></div></td>
+      <td><span class="role-badge">${u.role}</span></td>
+      <td>${accessNames.length ? accessNames.join(', ') : '—'}</td>
+      <td>
+        <div class="row-actions">
+          <button onclick="editUser('${u.id}')" title="Edit">${ICONS.edit}</button>
+          <button class="del" onclick="deleteUser('${u.id}')" title="Delete">${ICONS.trash}</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+  const tableOrEmpty = state.users.length ? `
+    <div class="table-wrap"><div class="table-scroll">
+      <table>
+        <thead><tr><th>Photo</th><th>Name & Username</th><th>Access Role</th><th>Company Access</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div></div>` : `
+    <div class="table-wrap"><div class="empty-state">
+      <div class="stamp">${ICONS.users}<span>EMPTY</span></div>
+      <h3>No users yet</h3>
+      <p>Add users to control who can access this workspace.</p>
+      <button class="btn btn-primary btn-sm" onclick="openUserModal()">${ICONS.plus} Add User</button>
+    </div></div>`;
+  return `
+    <div class="page-head">
+      <div>
+        <div class="eyebrow">Settings</div>
+        <h2>Manage Users</h2>
+        <p>Set names, passwords, profile photos, and access rights for each user.</p>
+      </div>
+      <button class="btn btn-primary" onclick="openUserModal()">${ICONS.plus} Add User</button>
+    </div>
+    ${tableOrEmpty}`;
+}
+function renderAccessList(selectedIds){
+  const list = document.getElementById('u-access-list');
+  if(!state.companies.length){
+    list.innerHTML = '<span style="font-size:12.5px;color:var(--text-muted);">No companies registered yet.</span>';
+    return;
+  }
+  list.innerHTML = state.companies.map(c=>`
+    <label class="access-item">
+      <input type="checkbox" value="${c.id}" ${selectedIds.includes(c.id)?'checked':''}>
+      <span>${c.nama} <span class="mono" style="color:var(--text-muted);">(${c.kode})</span></span>
+    </label>`).join('');
+}
+function openUserModal(){
+  state.editingUserId = null;
+  state.tempPhoto = null;
+  document.getElementById('userModalTitle').textContent = 'Add User';
+  document.getElementById('u-photo-preview').innerHTML = '—';
+  document.getElementById('u-nama').value = '';
+  document.getElementById('u-username').value = '';
+  document.getElementById('u-role').value = 'Head of Procurement';
+  document.getElementById('u-password').value = '';
+  document.getElementById('u-password2').value = '';
+  document.getElementById('u-password').placeholder = 'Create password';
+  renderAccessList([]);
+  document.getElementById('userModal').classList.add('open');
+}
+function editUser(id){
+  const u = state.users.find(x=>x.id===id);
+  if(!u) return;
+  state.editingUserId = id;
+  state.tempPhoto = u.foto;
+  document.getElementById('userModalTitle').textContent = 'Edit User';
+  document.getElementById('u-photo-preview').innerHTML = u.foto ? `<img src="${u.foto}" alt="">` : initials(u.nama);
+  document.getElementById('u-nama').value = u.nama;
+  document.getElementById('u-username').value = u.username;
+  document.getElementById('u-role').value = u.role;
+  document.getElementById('u-password').value = '';
+  document.getElementById('u-password2').value = '';
+  document.getElementById('u-password').placeholder = 'Leave blank to keep current';
+  renderAccessList(u.companyAccess);
+  document.getElementById('userModal').classList.add('open');
+}
+function closeUserModal(){ document.getElementById('userModal').classList.remove('open'); }
+function handlePhotoUpload(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  if(!file.type.startsWith('image/')){ toast('File must be an image'); return; }
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    state.tempPhoto = ev.target.result;
+    document.getElementById('u-photo-preview').innerHTML = `<img src="${ev.target.result}" alt="">`;
+  };
+  reader.readAsDataURL(file);
+}
+function removePhoto(){
+  state.tempPhoto = null;
+  const nama = document.getElementById('u-nama').value.trim();
+  document.getElementById('u-photo-preview').innerHTML = nama ? initials(nama) : '—';
+}
+function saveUser(){
+  const nama = document.getElementById('u-nama').value.trim();
+  const username = document.getElementById('u-username').value.trim();
+  const pw1 = document.getElementById('u-password').value;
+  const pw2 = document.getElementById('u-password2').value;
+  if(!nama || !username){ toast('Name and username are required'); return; }
+  if((pw1 || pw2) && pw1 !== pw2){ toast('Password confirmation does not match'); return; }
+  if(!state.editingUserId && !pw1){ toast('Password is required for new users'); return; }
+  const access = Array.from(document.querySelectorAll('#u-access-list input:checked')).map(el=>el.value);
+  const data = {
+    nama, username,
+    role: document.getElementById('u-role').value,
+    companyAccess: access,
+    foto: state.tempPhoto
+  };
+  if(state.editingUserId){
+    const u = state.users.find(x=>x.id===state.editingUserId);
+    Object.assign(u, data);
+    if(pw1) u.password = pw1;
+    toast('User changes saved');
+  } else {
+    data.password = pw1;
+    data.id = 'u'+Date.now();
+    state.users.push(data);
+    toast('User added');
+  }
+  closeUserModal();
+  renderContent();
+  scheduleSave();
+}
+function deleteUser(id){
+  const u = state.users.find(x=>x.id===id);
+  if(!u) return;
+  if(!confirm(`Delete user "${u.nama}"?`)) return;
+  state.users = state.users.filter(x=>x.id!==id);
+  renderContent();
+  toast('User deleted');
+  scheduleSave();
+}
+
+/* ============ INIT ============ */
+showView('login');
+</script>
+</body>
+</html>
