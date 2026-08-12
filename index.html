@@ -1979,9 +1979,11 @@ function bomListHTML(){
   const rows = list.map(b=>{
     const { total, mixedCurrency } = computeBomTotalCost(b);
     const costLabel = total ? formatMoney(total.amount, total.currency) + (mixedCurrency ? ' + other currencies' : '') : '—';
+    const materials = [...new Set(b.lines.map(l=>l.material).filter(Boolean))];
+    const subtitle = materials.length ? materials.join(', ') : `${b.lines.length} component${b.lines.length===1?'':'s'}`;
     return `<tr>
       <td class="mono">${b.productCode || '—'}</td>
-      <td><div class="name-cell"><b>${b.productName}</b><span>${b.description || 'No description'}</span></div></td>
+      <td><div class="name-cell"><b>${b.productName}</b><span>${subtitle}</span></div></td>
       <td>${b.lines.length} component${b.lines.length===1?'':'s'}</td>
       <td class="mono">${costLabel}</td>
       <td>
@@ -2235,16 +2237,26 @@ function deleteBom(id){
 
 // Auto-save: every field change syncs the draft into state.boms and
 // schedules a debounced save to Drive — no manual "Save" step needed.
+function deriveBomIdentity(lines){
+  const first = (lines || []).find(l => l.partDescription || l.partNo || l.partCode) || {};
+  return {
+    productName: first.partDescription || first.partNo || first.partCode || 'Untitled BOM',
+    productCode: first.partCode || '',
+    description: ''
+  };
+}
 function syncDraftBomToState(){
   const d = state.draftBom;
-  if(!d.productName || !d.productName.trim()) return; // wait until it's at least named
+  const hasContent = d.lines.some(l => l.itemId || l.partCode || l.partNo || l.partDescription);
+  if(!hasContent) return; // wait until there's something meaningful to save
+  const identity = deriveBomIdentity(d.lines);
   const id = state.editingBomId || (state.editingBomId = 'bom'+Date.now());
   const record = {
     id,
     companyId: state.currentCompanyId,
-    productName: d.productName.trim(),
-    productCode: (d.productCode||'').trim(),
-    description: (d.description||'').trim(),
+    productName: identity.productName,
+    productCode: identity.productCode,
+    description: identity.description,
     lines: JSON.parse(JSON.stringify(d.lines)),
     updatedAt: new Date().toISOString()
   };
@@ -2342,7 +2354,6 @@ function updateBomGrandTotal(){
 }
 function finishBom(){
   const d = state.draftBom;
-  if(!d.productName.trim()){ toast('Product name is required'); return; }
   const hasContent = d.lines.some(l=>l.itemId || l.partCode || l.partNo || l.partDescription);
   if(!hasContent){ toast('Add at least one component'); return; }
   syncDraftBomToState();
@@ -2399,22 +2410,6 @@ function bomBuilderHTML(){
         <p>Changes save automatically as you type. Press Done when you're finished.</p>
       </div>
       <button class="btn btn-ghost" onclick="backToBomList()">Back to list</button>
-    </div>
-    <div class="table-wrap" style="padding:22px;margin-bottom:18px;">
-      <div class="form-grid">
-        <div class="field">
-          <label>Product Name</label>
-          <input value="${d.productName}" placeholder="e.g. Injection Mold Cover Assembly" oninput="updateBomMeta('productName',this.value)">
-        </div>
-        <div class="field">
-          <label>Product Code</label>
-          <input class="mono" value="${d.productCode}" placeholder="e.g. ASM-0012" oninput="updateBomMeta('productCode',this.value)">
-        </div>
-        <div class="field span-2">
-          <label>Description</label>
-          <input value="${d.description}" placeholder="Optional notes about this product/assembly" oninput="updateBomMeta('description',this.value)">
-        </div>
-      </div>
     </div>
     <div class="table-wrap">
       <div class="table-scroll">
