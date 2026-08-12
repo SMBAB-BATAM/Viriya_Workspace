@@ -1941,11 +1941,17 @@ function companyBoms(){
   return state.boms.filter(b=>b.companyId===state.currentCompanyId);
 }
 function computeWeightShot(line){
-  if(!line.type) return null;
+  const hasAnyRm = (line.rms||[]).some(r=>r.type);
+  if(!hasAnyRm) return null;
   const cavity = parseFloat(line.cavity) || 0;
   const partWeight = parseFloat(line.partWeight) || 0;
   const runnerWeight = parseFloat(line.runnerWeight) || 0;
   return (cavity * partWeight) + runnerWeight;
+}
+function rmSummary(line, field){
+  // field: 'type' | 'material' | 'rmCode' — joins that field across all RM entries for display
+  const vals = (line.rms||[]).map(r=>r[field]).filter(Boolean);
+  return vals.length ? vals.join(', ') : '';
 }
 function deriveBomIdentity(lines){
   const first = (lines || []).find(l => l.partDescription || l.partNo || l.partCode) || {};
@@ -1962,25 +1968,27 @@ function bomListHTML(){
   const c = currentCompany();
   const list = companyBoms();
 
-  // Flatten to one row per component line so every field is visible
-  // directly in the list — no need to open a BOM to see its details.
+  // Flatten to one row per Part so every field is visible directly in
+  // the list — no need to open a BOM to see its details. Multiple RM
+  // entries on one part are shown joined together in each RM column.
   const flatRows = [];
   list.forEach(b=>{
-    b.lines.forEach((line, lineIndex)=>{
-      flatRows.push({ bom: b, line, lineIndex });
-    });
+    b.lines.forEach(line=>{ flatRows.push({ bom: b, line }); });
   });
 
   const rows = flatRows.map(({bom, line})=>{
     const ws = computeWeightShot(line);
+    const types = rmSummary(line, 'type');
+    const materials = rmSummary(line, 'material');
+    const rmCodes = rmSummary(line, 'rmCode');
     return `<tr>
       <td>${line.customerName || '—'}</td>
       <td class="mono">${line.partCode || '—'}</td>
       <td>${line.partNo || '—'}</td>
       <td>${line.partDescription || '—'}</td>
-      <td>${line.type ? `<span class="badge">${line.type}</span>` : '—'}</td>
-      <td>${line.material || '—'}</td>
-      <td class="mono">${line.rmCode || '—'}</td>
+      <td>${types ? `<span class="badge">${types}</span>` : '—'}</td>
+      <td>${materials || '—'}</td>
+      <td class="mono">${rmCodes || '—'}</td>
       <td class="mono">${line.cavity || '—'}</td>
       <td class="mono">${line.partWeight || '—'}</td>
       <td class="mono">${line.runnerWeight || '—'}</td>
@@ -2041,6 +2049,8 @@ function downloadBomTemplate(){
   const exampleRows = [
     { 'Customer Name':'PT Yudo Indonesia', 'Part Code':'PC-001', 'Part No':'N-001', 'Part Description':'Cover Top Shell', 'Type':'Resin', 'Material':'PP Natural', 'RM Code':'RM-0021',
       'Cavity':4, 'Part Weight (g)':12.5, 'Runner Weight (g)':3.2, 'Weight Shot (g)':'' },
+    { 'Customer Name':'PT Yudo Indonesia', 'Part Code':'PC-001', 'Part No':'N-001', 'Part Description':'Cover Top Shell', 'Type':'MB', 'Material':'Black MB', 'RM Code':'RM-0099',
+      'Cavity':'', 'Part Weight (g)':'', 'Runner Weight (g)':'', 'Weight Shot (g)':'' },
     { 'Customer Name':'PT Yudo Indonesia', 'Part Code':'PC-002', 'Part No':'N-002', 'Part Description':'Cover Mounting Bracket', 'Type':'Metal Insert', 'Material':'Brass', 'RM Code':'RM-0088',
       'Cavity':2, 'Part Weight (g)':4.0, 'Runner Weight (g)':1.0, 'Weight Shot (g)':'' }
   ];
@@ -2055,14 +2065,15 @@ function downloadBomTemplate(){
     [''],
     ['How to use this file'],
     ["1. Go to the 'BOM' sheet."],
-    ['2. Each row is ONE part/component — there is no product grouping, every row becomes its own BOM.'],
-    ['3. The first 2 rows are EXAMPLE rows. Delete them or leave them.'],
-    ["4. 'Type' only accepts exactly: Resin, MB, Metal Insert, or Other."],
-    ["5. 'Material' and 'RM Code' are free text (e.g. Material: PP Natural, RM Code: RM-0021)."],
-    ["6. 'Cavity', 'Part Weight (g)', 'Runner Weight (g)' only matter if Type is filled in."],
-    ["7. 'Weight Shot (g)' is calculated automatically by the app — you can leave it blank."],
-    ['8. Save this file, then in Wiriya Workspace go to PMC → BOM → Import Excel and select it.'],
-    ['9. Importing again later with the same Part Code will UPDATE that BOM rather than duplicate it.']
+    ['2. Each row is one RM entry. A Part normally needs just ONE row.'],
+    ["3. If a Part uses more than one RM (e.g. Resin + MB), add another row with the SAME Part Code — it will be added as an extra RM on that same part, not a new part."],
+    ['4. The first 3 rows are EXAMPLE rows (rows 1-2 are the same part with 2 RM entries). Delete them or leave them.'],
+    ["5. 'Type' only accepts exactly: Resin, MB, Metal Insert, or Other."],
+    ["6. 'Material' and 'RM Code' are free text (e.g. Material: PP Natural, RM Code: RM-0021)."],
+    ["7. 'Cavity', 'Part Weight (g)', 'Runner Weight (g)' only need to be filled once per part (on the first row) — leave them blank on additional RM rows for the same part."],
+    ["8. 'Weight Shot (g)' is calculated automatically by the app — you can leave it blank."],
+    ['9. Save this file, then in Wiriya Workspace go to PMC → BOM → Import Excel and select it.'],
+    ['10. Importing again later with the same Part Code will UPDATE that part rather than duplicate it.']
   ];
   const readMeSheet = XLSX.utils.aoa_to_sheet(readMe);
   readMeSheet['!cols'] = [{wch:100}];
@@ -2080,18 +2091,21 @@ function exportBomsToExcel(){
   list.forEach(b=>{
     b.lines.forEach(line=>{
       const ws = computeWeightShot(line);
-      rows.push({
-        'Customer Name': line.customerName || '',
-        'Part Code': line.partCode || '',
-        'Part No': line.partNo || '',
-        'Part Description': line.partDescription || '',
-        'Type': line.type || '',
-        'Material': line.material || '',
-        'RM Code': line.rmCode || '',
-        'Cavity': line.cavity || '',
-        'Part Weight (g)': line.partWeight || '',
-        'Runner Weight (g)': line.runnerWeight || '',
-        'Weight Shot (g)': ws === null ? '' : ws
+      const rms = (line.rms && line.rms.length) ? line.rms : [{type:'',material:'',rmCode:''}];
+      rms.forEach((rm, ri)=>{
+        rows.push({
+          'Customer Name': line.customerName || '',
+          'Part Code': line.partCode || '',
+          'Part No': line.partNo || '',
+          'Part Description': line.partDescription || '',
+          'Type': rm.type || '',
+          'Material': rm.material || '',
+          'RM Code': rm.rmCode || '',
+          'Cavity': ri===0 ? (line.cavity || '') : '',
+          'Part Weight (g)': ri===0 ? (line.partWeight || '') : '',
+          'Runner Weight (g)': ri===0 ? (line.runnerWeight || '') : '',
+          'Weight Shot (g)': ri===0 ? (ws === null ? '' : ws) : ''
+        });
       });
     });
   });
@@ -2125,20 +2139,42 @@ function importBomRows(rows){
   const validRows = rows.filter(r => String(r['Part Code']||'').trim() || String(r['Part No']||'').trim() || String(r['Part Description']||'').trim());
   if(!validRows.length){ toast('No valid rows found in that file'); return; }
 
-  let created = 0, updated = 0;
+  // Group consecutive/matching rows sharing the same Part Code (or Part No
+  // if no code) into ONE part with multiple RM entries.
+  const grouped = [];
+  const indexByKey = {};
   validRows.forEach(r=>{
-    const line = {
-      customerName: String(r['Customer Name']||'').trim(),
-      partCode: String(r['Part Code']||'').trim(),
-      partNo: String(r['Part No']||'').trim(),
-      partDescription: String(r['Part Description']||'').trim(),
+    const partCode = String(r['Part Code']||'').trim();
+    const partNo = String(r['Part No']||'').trim();
+    const key = partCode || partNo || Math.random().toString(36);
+    const rm = {
       type: String(r['Type']||'').trim(),
       material: String(r['Material']||'').trim(),
-      rmCode: String(r['RM Code']||'').trim(),
-      cavity: r['Cavity'] !== '' ? String(r['Cavity']) : '',
-      partWeight: r['Part Weight (g)'] !== '' ? String(r['Part Weight (g)']) : '',
-      runnerWeight: r['Runner Weight (g)'] !== '' ? String(r['Runner Weight (g)']) : ''
+      rmCode: String(r['RM Code']||'').trim()
     };
+    if(indexByKey[key] !== undefined){
+      const existingLine = grouped[indexByKey[key]];
+      if(rm.type || rm.material || rm.rmCode) existingLine.rms.push(rm);
+      if(r['Cavity'] !== '') existingLine.cavity = String(r['Cavity']);
+      if(r['Part Weight (g)'] !== '') existingLine.partWeight = String(r['Part Weight (g)']);
+      if(r['Runner Weight (g)'] !== '') existingLine.runnerWeight = String(r['Runner Weight (g)']);
+    } else {
+      indexByKey[key] = grouped.length;
+      grouped.push({
+        customerName: String(r['Customer Name']||'').trim(),
+        partCode, partNo,
+        partDescription: String(r['Part Description']||'').trim(),
+        rms: (rm.type || rm.material || rm.rmCode) ? [rm] : [],
+        cavity: r['Cavity'] !== '' ? String(r['Cavity']) : '',
+        partWeight: r['Part Weight (g)'] !== '' ? String(r['Part Weight (g)']) : '',
+        runnerWeight: r['Runner Weight (g)'] !== '' ? String(r['Runner Weight (g)']) : ''
+      });
+    }
+  });
+  grouped.forEach(line=>{ if(!line.rms.length) line.rms = [emptyRm()]; });
+
+  let created = 0, updated = 0;
+  grouped.forEach(line=>{
     const identity = deriveBomIdentity([line]);
     const existing = state.boms.find(b => b.companyId===state.currentCompanyId &&
       identity.productCode && b.productCode === identity.productCode);
@@ -2167,20 +2203,25 @@ function importBomRows(rows){
 }
 
 /* ---- Builder (auto-saves as you go — press Done to finish) ---- */
+function emptyRm(){
+  return { type:'', material:'', rmCode:'' };
+}
 function emptyBomLine(){
-  return { customerName:'', partCode:'', partNo:'', partDescription:'', type:'', material:'', rmCode:'', cavity:'', partWeight:'', runnerWeight:'' };
+  return { customerName:'', partCode:'', partNo:'', partDescription:'', rms:[ emptyRm() ], cavity:'', partWeight:'', runnerWeight:'' };
 }
 function migrateBomLine_(l){
-  // Older data stored the Resin/MB/Metal Insert/Other choice in `material`.
-  // That field is now `type`; `material` is a new free-text field.
-  if((l.type === undefined || l.type === '') && l.material && BOM_TYPES.includes(l.material)){
-    l.type = l.material;
-    l.material = '';
+  // Older data stored a single type/material/rmCode directly on the line.
+  // These are now a list of RM entries (`rms`), normally just one.
+  if(!l.rms){
+    const hadOldData = l.type || l.material || l.rmCode;
+    l.rms = hadOldData ? [{ type: l.type||'', material: l.material||'', rmCode: l.rmCode||'' }] : [emptyRm()];
+    delete l.type; delete l.material; delete l.rmCode;
   }
   l.customerName = l.customerName || '';
   l.partCode = l.partCode || ''; l.partNo = l.partNo || ''; l.partDescription = l.partDescription || '';
-  l.type = l.type || ''; l.material = l.material || ''; l.rmCode = l.rmCode || '';
   l.cavity = l.cavity || ''; l.partWeight = l.partWeight || ''; l.runnerWeight = l.runnerWeight || '';
+  if(!l.rms.length) l.rms = [emptyRm()];
+  l.rms.forEach(r=>{ r.type = r.type||''; r.material = r.material||''; r.rmCode = r.rmCode||''; });
   return l;
 }
 function startNewBom(){
@@ -2266,17 +2307,28 @@ function updateBomLinePartDescription(index, value){
   state.draftBom.lines[index].partDescription = value;
   syncDraftBomToState();
 }
-function updateBomLineType(index, value){
-  state.draftBom.lines[index].type = value;
-  renderContent(); // type choice reveals/hides the weight fields
+function addRm(lineIndex){
+  state.draftBom.lines[lineIndex].rms.push(emptyRm());
+  renderContent();
+}
+function removeRm(lineIndex, rmIndex){
+  const line = state.draftBom.lines[lineIndex];
+  line.rms.splice(rmIndex,1);
+  if(!line.rms.length) line.rms.push(emptyRm());
+  renderContent();
   syncDraftBomToState();
 }
-function updateBomLineMaterialText(index, value){
-  state.draftBom.lines[index].material = value;
+function updateRmType(lineIndex, rmIndex, value){
+  state.draftBom.lines[lineIndex].rms[rmIndex].type = value;
+  renderContent(); // reveals/hides cavity & weight fields
   syncDraftBomToState();
 }
-function updateBomLineRmCode(index, value){
-  state.draftBom.lines[index].rmCode = value;
+function updateRmMaterial(lineIndex, rmIndex, value){
+  state.draftBom.lines[lineIndex].rms[rmIndex].material = value;
+  syncDraftBomToState();
+}
+function updateRmCode(lineIndex, rmIndex, value){
+  state.draftBom.lines[lineIndex].rms[rmIndex].rmCode = value;
   syncDraftBomToState();
 }
 function updateBomLineCavity(index, value){
@@ -2303,7 +2355,7 @@ function updateBomLineWeightShotDisplay(index){
 function finishBom(){
   const d = state.draftBom;
   const hasContent = d.lines.some(l=>l.partCode || l.partNo || l.partDescription);
-  if(!hasContent){ toast('Add at least one component'); return; }
+  if(!hasContent){ toast('Add at least one part'); return; }
   syncDraftBomToState();
   state.draftBom = null;
   state.editingBomId = null;
@@ -2314,30 +2366,77 @@ function finishBom(){
 function bomBuilderHTML(){
   const d = state.draftBom;
 
-  const rowsHTML = d.lines.map((line,li)=>{
+  const partsHTML = d.lines.map((line,li)=>{
+    const hasAnyType = line.rms.some(r=>r.type);
     const ws = computeWeightShot(line);
-    const weightCells = line.type ? `
-        <td><input type="number" min="0" step="1" style="width:64px;" value="${line.cavity}" oninput="updateBomLineCavity(${li},this.value)"></td>
-        <td><input type="number" min="0" step="0.01" style="width:80px;" value="${line.partWeight}" oninput="updateBomLinePartWeight(${li},this.value)"></td>
-        <td><input type="number" min="0" step="0.01" style="width:80px;" value="${line.runnerWeight}" oninput="updateBomLineRunnerWeight(${li},this.value)"></td>
-        <td class="mono" id="bom-line-weightshot-${li}">${ws===null?'—':ws.toLocaleString('en-US',{maximumFractionDigits:2})+' g'}</td>` : `
-        <td colspan="4" style="color:var(--text-muted);font-size:12px;text-align:center;">Choose a type to enter cavity &amp; weights</td>`;
-    return `<tr>
-      <td><input type="text" style="width:150px;" value="${line.customerName||''}" placeholder="Customer name" oninput="updateBomLineCustomerName(${li},this.value)"></td>
-      <td><input type="text" style="width:100px;" value="${line.partCode||''}" placeholder="Code" oninput="updateBomLinePartCode(${li},this.value)"></td>
-      <td><input type="text" style="width:100px;" value="${line.partNo||''}" placeholder="No." oninput="updateBomLinePartNo(${li},this.value)"></td>
-      <td><input type="text" style="width:220px;" value="${line.partDescription||''}" placeholder="Part description" oninput="updateBomLinePartDescription(${li},this.value)"></td>
-      <td>
-        <select onchange="updateBomLineType(${li},this.value)">
-          <option value="">Select…</option>
-          ${BOM_TYPES.map(m=>`<option value="${m}" ${m===line.type?'selected':''}>${m}</option>`).join('')}
-        </select>
-      </td>
-      <td><input type="text" style="width:140px;" value="${line.material||''}" placeholder="Material" oninput="updateBomLineMaterialText(${li},this.value)"></td>
-      <td><input type="text" style="width:110px;" value="${line.rmCode||''}" placeholder="RM Code" oninput="updateBomLineRmCode(${li},this.value)"></td>
-      ${weightCells}
-      <td><button type="button" class="btn-icon-mini" onclick="removeBomLine(${li})" title="Remove component">${ICONS.trash}</button></td>
-    </tr>`;
+
+    const rmRows = line.rms.map((rm,ri)=>`
+      <tr>
+        <td>
+          <select onchange="updateRmType(${li},${ri},this.value)">
+            <option value="">Select…</option>
+            ${BOM_TYPES.map(t=>`<option value="${t}" ${t===rm.type?'selected':''}>${t}</option>`).join('')}
+          </select>
+        </td>
+        <td><input type="text" value="${rm.material||''}" placeholder="Material" oninput="updateRmMaterial(${li},${ri},this.value)"></td>
+        <td><input type="text" value="${rm.rmCode||''}" placeholder="RM Code" oninput="updateRmCode(${li},${ri},this.value)"></td>
+        <td>${line.rms.length>1 ? `<button type="button" class="btn-icon-mini" onclick="removeRm(${li},${ri})" title="Remove RM">${ICONS.trash}</button>` : ''}</td>
+      </tr>`).join('');
+
+    const weightFieldsHTML = hasAnyType ? `
+      <div class="form-grid" style="margin-top:16px;">
+        <div class="field">
+          <label>Cavity</label>
+          <input type="number" min="0" step="1" value="${line.cavity}" oninput="updateBomLineCavity(${li},this.value)">
+        </div>
+        <div class="field">
+          <label>Part Weight (g)</label>
+          <input type="number" min="0" step="0.01" value="${line.partWeight}" oninput="updateBomLinePartWeight(${li},this.value)">
+        </div>
+        <div class="field">
+          <label>Runner Weight (g)</label>
+          <input type="number" min="0" step="0.01" value="${line.runnerWeight}" oninput="updateBomLineRunnerWeight(${li},this.value)">
+        </div>
+        <div class="field">
+          <label>Weight Shot (g)</label>
+          <input class="mono" disabled id="bom-line-weightshot-${li}" value="${ws===null?'—':ws.toLocaleString('en-US',{maximumFractionDigits:2})+' g'}" style="color:var(--text-secondary);">
+        </div>
+      </div>` : `
+      <p style="margin-top:14px;font-size:12px;color:var(--text-muted);">Add an RM with a Type to enter cavity &amp; weights.</p>`;
+
+    return `
+      <div class="table-wrap" style="padding:22px;margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:16px;">
+          <div class="form-grid" style="flex:1;">
+            <div class="field">
+              <label>Customer Name</label>
+              <input value="${line.customerName||''}" placeholder="Customer name" oninput="updateBomLineCustomerName(${li},this.value)">
+            </div>
+            <div class="field">
+              <label>Part Code</label>
+              <input class="mono" value="${line.partCode||''}" placeholder="Code" oninput="updateBomLinePartCode(${li},this.value)">
+            </div>
+            <div class="field">
+              <label>Part No</label>
+              <input value="${line.partNo||''}" placeholder="No." oninput="updateBomLinePartNo(${li},this.value)">
+            </div>
+            <div class="field">
+              <label>Part Description</label>
+              <input value="${line.partDescription||''}" placeholder="Part description" oninput="updateBomLinePartDescription(${li},this.value)">
+            </div>
+          </div>
+          ${d.lines.length>1 ? `<button type="button" class="btn-icon-mini" onclick="removeBomLine(${li})" title="Remove part" style="margin-top:4px;">${ICONS.trash}</button>` : ''}
+        </div>
+        <div class="section-label" style="margin:0 0 10px;padding-top:0;border-top:none;">Raw Materials (normally just one)</div>
+        <div class="table-wrap"><div class="table-scroll">
+          <table>
+            <thead><tr><th>Type</th><th>Material</th><th>RM Code</th><th></th></tr></thead>
+            <tbody>${rmRows}</tbody>
+          </table>
+        </div></div>
+        <button type="button" class="btn btn-ghost btn-sm" style="margin-top:10px;" onclick="addRm(${li})">${ICONS.plus} Add RM</button>
+        ${weightFieldsHTML}
+      </div>`;
   }).join('');
 
   return `
@@ -2349,21 +2448,9 @@ function bomBuilderHTML(){
       </div>
       <button class="btn btn-ghost" onclick="backToBomList()">Back to list</button>
     </div>
-    <div class="table-wrap">
-      <div class="table-scroll">
-        <table class="comparison-table">
-          <thead><tr>
-            <th>Customer Name</th><th>Part Code</th><th>Part No</th><th>Part Description</th><th>Type</th>
-            <th>Material</th><th>RM Code</th><th>Cavity</th><th>Part Wt (g)</th><th>Runner Wt (g)</th><th>Weight Shot (g)</th><th></th>
-          </tr></thead>
-          <tbody>
-            ${rowsHTML}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    ${partsHTML}
     <div style="margin-top:14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-      <button type="button" class="btn btn-ghost btn-sm" onclick="addBomLine()">${ICONS.plus} Add Component</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="addBomLine()">${ICONS.plus} Add Part</button>
       <button type="button" class="btn btn-primary" onclick="finishBom()">${ICONS.check} Done</button>
     </div>
     <p style="margin-top:12px;font-size:11.5px;color:var(--text-muted);">Weight Shot = Cavity × Part Weight + Runner Weight.</p>`;
