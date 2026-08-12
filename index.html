@@ -1940,17 +1940,24 @@ const BOM_TYPES = ['Resin','MB','Metal Insert','Other'];
 function companyBoms(){
   return state.boms.filter(b=>b.companyId===state.currentCompanyId);
 }
-function computeWeightShot(line){
-  const hasAnyRm = (line.rms||[]).some(r=>r.type);
-  if(!hasAnyRm) return null;
-  const cavity = parseFloat(line.cavity) || 0;
-  const partWeight = parseFloat(line.partWeight) || 0;
-  const runnerWeight = parseFloat(line.runnerWeight) || 0;
+function computeRmWeightShot(rm){
+  if(!rm.type) return null;
+  const cavity = parseFloat(rm.cavity) || 0;
+  const partWeight = parseFloat(rm.partWeight) || 0;
+  const runnerWeight = parseFloat(rm.runnerWeight) || 0;
   return (cavity * partWeight) + runnerWeight;
 }
-function rmSummary(line, field){
-  // field: 'type' | 'material' | 'rmCode' — joins that field across all RM entries for display
-  const vals = (line.rms||[]).map(r=>r[field]).filter(Boolean);
+function rmFieldSummary(line, field){
+  // Joins one field across all RM entries for the flat list view —
+  // each RM's own value stays visible, never merged into a single number.
+  const vals = (line.rms||[]).map(r=>r[field]).filter(v=>v!==undefined && v!=='' && v!==null);
+  return vals.length ? vals.join(', ') : '';
+}
+function rmWeightShotSummary(line){
+  const vals = (line.rms||[]).map(r=>{
+    const ws = computeRmWeightShot(r);
+    return ws===null ? null : ws.toLocaleString('en-US',{maximumFractionDigits:2})+' g';
+  }).filter(v=>v!==null);
   return vals.length ? vals.join(', ') : '';
 }
 function deriveBomIdentity(lines){
@@ -1968,19 +1975,22 @@ function bomListHTML(){
   const c = currentCompany();
   const list = companyBoms();
 
-  // Flatten to one row per Part so every field is visible directly in
-  // the list — no need to open a BOM to see its details. Multiple RM
-  // entries on one part are shown joined together in each RM column.
+  // One row per Part. Each RM keeps its own Type/Material/RM Code/Cavity/
+  // Weight/Weight Shot — shown joined per column, never combined into a
+  // single merged calculation.
   const flatRows = [];
   list.forEach(b=>{
     b.lines.forEach(line=>{ flatRows.push({ bom: b, line }); });
   });
 
   const rows = flatRows.map(({bom, line})=>{
-    const ws = computeWeightShot(line);
-    const types = rmSummary(line, 'type');
-    const materials = rmSummary(line, 'material');
-    const rmCodes = rmSummary(line, 'rmCode');
+    const types = rmFieldSummary(line, 'type');
+    const materials = rmFieldSummary(line, 'material');
+    const rmCodes = rmFieldSummary(line, 'rmCode');
+    const cavities = rmFieldSummary(line, 'cavity');
+    const partWeights = rmFieldSummary(line, 'partWeight');
+    const runnerWeights = rmFieldSummary(line, 'runnerWeight');
+    const weightShots = rmWeightShotSummary(line);
     return `<tr>
       <td>${line.customerName || '—'}</td>
       <td class="mono">${line.partCode || '—'}</td>
@@ -1989,10 +1999,10 @@ function bomListHTML(){
       <td>${types ? `<span class="badge">${types}</span>` : '—'}</td>
       <td>${materials || '—'}</td>
       <td class="mono">${rmCodes || '—'}</td>
-      <td class="mono">${line.cavity || '—'}</td>
-      <td class="mono">${line.partWeight || '—'}</td>
-      <td class="mono">${line.runnerWeight || '—'}</td>
-      <td class="mono">${ws===null?'—':ws.toLocaleString('en-US',{maximumFractionDigits:2})+' g'}</td>
+      <td class="mono">${cavities || '—'}</td>
+      <td class="mono">${partWeights || '—'}</td>
+      <td class="mono">${runnerWeights || '—'}</td>
+      <td class="mono">${weightShots || '—'}</td>
       <td>
         <div class="row-actions">
           <button onclick="editBom('${bom.id}')" title="Edit">${ICONS.edit}</button>
@@ -2050,7 +2060,7 @@ function downloadBomTemplate(){
     { 'Customer Name':'PT Yudo Indonesia', 'Part Code':'PC-001', 'Part No':'N-001', 'Part Description':'Cover Top Shell', 'Type':'Resin', 'Material':'PP Natural', 'RM Code':'RM-0021',
       'Cavity':4, 'Part Weight (g)':12.5, 'Runner Weight (g)':3.2, 'Weight Shot (g)':'' },
     { 'Customer Name':'PT Yudo Indonesia', 'Part Code':'PC-001', 'Part No':'N-001', 'Part Description':'Cover Top Shell', 'Type':'MB', 'Material':'Black MB', 'RM Code':'RM-0099',
-      'Cavity':'', 'Part Weight (g)':'', 'Runner Weight (g)':'', 'Weight Shot (g)':'' },
+      'Cavity':4, 'Part Weight (g)':0.4, 'Runner Weight (g)':0.1, 'Weight Shot (g)':'' },
     { 'Customer Name':'PT Yudo Indonesia', 'Part Code':'PC-002', 'Part No':'N-002', 'Part Description':'Cover Mounting Bracket', 'Type':'Metal Insert', 'Material':'Brass', 'RM Code':'RM-0088',
       'Cavity':2, 'Part Weight (g)':4.0, 'Runner Weight (g)':1.0, 'Weight Shot (g)':'' }
   ];
@@ -2066,11 +2076,11 @@ function downloadBomTemplate(){
     ['How to use this file'],
     ["1. Go to the 'BOM' sheet."],
     ['2. Each row is one RM entry. A Part normally needs just ONE row.'],
-    ["3. If a Part uses more than one RM (e.g. Resin + MB), add another row with the SAME Part Code — it will be added as an extra RM on that same part, not a new part."],
-    ['4. The first 3 rows are EXAMPLE rows (rows 1-2 are the same part with 2 RM entries). Delete them or leave them.'],
-    ["5. 'Type' only accepts exactly: Resin, MB, Metal Insert, or Other."],
-    ["6. 'Material' and 'RM Code' are free text (e.g. Material: PP Natural, RM Code: RM-0021)."],
-    ["7. 'Cavity', 'Part Weight (g)', 'Runner Weight (g)' only need to be filled once per part (on the first row) — leave them blank on additional RM rows for the same part."],
+    ["3. If a Part uses more than one RM (e.g. Resin + MB), add another row with the SAME Part Code — it becomes an extra RM on that same part, not a new part."],
+    ["4. Each RM row has its OWN Cavity / Part Weight / Runner Weight / Weight Shot — these are never combined between RMs, fill them in separately for every RM row."],
+    ['5. The first 3 rows are EXAMPLE rows (rows 1-2 are the same part with 2 separate RM entries). Delete them or leave them.'],
+    ["6. 'Type' only accepts exactly: Resin, MB, Metal Insert, or Other."],
+    ["7. 'Material' and 'RM Code' are free text (e.g. Material: PP Natural, RM Code: RM-0021)."],
     ["8. 'Weight Shot (g)' is calculated automatically by the app — you can leave it blank."],
     ['9. Save this file, then in Wiriya Workspace go to PMC → BOM → Import Excel and select it.'],
     ['10. Importing again later with the same Part Code will UPDATE that part rather than duplicate it.']
@@ -2090,9 +2100,9 @@ function exportBomsToExcel(){
   const rows = [];
   list.forEach(b=>{
     b.lines.forEach(line=>{
-      const ws = computeWeightShot(line);
-      const rms = (line.rms && line.rms.length) ? line.rms : [{type:'',material:'',rmCode:''}];
-      rms.forEach((rm, ri)=>{
+      const rms = (line.rms && line.rms.length) ? line.rms : [emptyRm()];
+      rms.forEach(rm=>{
+        const ws = computeRmWeightShot(rm);
         rows.push({
           'Customer Name': line.customerName || '',
           'Part Code': line.partCode || '',
@@ -2101,10 +2111,10 @@ function exportBomsToExcel(){
           'Type': rm.type || '',
           'Material': rm.material || '',
           'RM Code': rm.rmCode || '',
-          'Cavity': ri===0 ? (line.cavity || '') : '',
-          'Part Weight (g)': ri===0 ? (line.partWeight || '') : '',
-          'Runner Weight (g)': ri===0 ? (line.runnerWeight || '') : '',
-          'Weight Shot (g)': ri===0 ? (ws === null ? '' : ws) : ''
+          'Cavity': rm.cavity || '',
+          'Part Weight (g)': rm.partWeight || '',
+          'Runner Weight (g)': rm.runnerWeight || '',
+          'Weight Shot (g)': ws === null ? '' : ws
         });
       });
     });
@@ -2140,7 +2150,8 @@ function importBomRows(rows){
   if(!validRows.length){ toast('No valid rows found in that file'); return; }
 
   // Group consecutive/matching rows sharing the same Part Code (or Part No
-  // if no code) into ONE part with multiple RM entries.
+  // if no code) into ONE part with multiple RM entries — each RM keeps its
+  // own Cavity/Weight/Weight Shot.
   const grouped = [];
   const indexByKey = {};
   validRows.forEach(r=>{
@@ -2150,24 +2161,21 @@ function importBomRows(rows){
     const rm = {
       type: String(r['Type']||'').trim(),
       material: String(r['Material']||'').trim(),
-      rmCode: String(r['RM Code']||'').trim()
+      rmCode: String(r['RM Code']||'').trim(),
+      cavity: r['Cavity'] !== '' ? String(r['Cavity']) : '',
+      partWeight: r['Part Weight (g)'] !== '' ? String(r['Part Weight (g)']) : '',
+      runnerWeight: r['Runner Weight (g)'] !== '' ? String(r['Runner Weight (g)']) : ''
     };
     if(indexByKey[key] !== undefined){
       const existingLine = grouped[indexByKey[key]];
       if(rm.type || rm.material || rm.rmCode) existingLine.rms.push(rm);
-      if(r['Cavity'] !== '') existingLine.cavity = String(r['Cavity']);
-      if(r['Part Weight (g)'] !== '') existingLine.partWeight = String(r['Part Weight (g)']);
-      if(r['Runner Weight (g)'] !== '') existingLine.runnerWeight = String(r['Runner Weight (g)']);
     } else {
       indexByKey[key] = grouped.length;
       grouped.push({
         customerName: String(r['Customer Name']||'').trim(),
         partCode, partNo,
         partDescription: String(r['Part Description']||'').trim(),
-        rms: (rm.type || rm.material || rm.rmCode) ? [rm] : [],
-        cavity: r['Cavity'] !== '' ? String(r['Cavity']) : '',
-        partWeight: r['Part Weight (g)'] !== '' ? String(r['Part Weight (g)']) : '',
-        runnerWeight: r['Runner Weight (g)'] !== '' ? String(r['Runner Weight (g)']) : ''
+        rms: (rm.type || rm.material || rm.rmCode) ? [rm] : []
       });
     }
   });
@@ -2204,14 +2212,13 @@ function importBomRows(rows){
 
 /* ---- Builder (auto-saves as you go — press Done to finish) ---- */
 function emptyRm(){
-  return { type:'', material:'', rmCode:'' };
+  return { type:'', material:'', rmCode:'', cavity:'', partWeight:'', runnerWeight:'' };
 }
 function emptyBomLine(){
-  return { customerName:'', partCode:'', partNo:'', partDescription:'', rms:[ emptyRm() ], cavity:'', partWeight:'', runnerWeight:'' };
+  return { customerName:'', partCode:'', partNo:'', partDescription:'', rms:[ emptyRm() ] };
 }
 function migrateBomLine_(l){
-  // Older data stored a single type/material/rmCode directly on the line.
-  // These are now a list of RM entries (`rms`), normally just one.
+  // Older data (v1) stored a single type/material/rmCode directly on the line.
   if(!l.rms){
     const hadOldData = l.type || l.material || l.rmCode;
     l.rms = hadOldData ? [{ type: l.type||'', material: l.material||'', rmCode: l.rmCode||'' }] : [emptyRm()];
@@ -2219,9 +2226,23 @@ function migrateBomLine_(l){
   }
   l.customerName = l.customerName || '';
   l.partCode = l.partCode || ''; l.partNo = l.partNo || ''; l.partDescription = l.partDescription || '';
-  l.cavity = l.cavity || ''; l.partWeight = l.partWeight || ''; l.runnerWeight = l.runnerWeight || '';
   if(!l.rms.length) l.rms = [emptyRm()];
-  l.rms.forEach(r=>{ r.type = r.type||''; r.material = r.material||''; r.rmCode = r.rmCode||''; });
+
+  // Older data (v2) had one shared Cavity/Weight per part instead of per RM.
+  // Move that into the first RM entry so its calculation is preserved;
+  // any additional RMs start blank and need their own values filled in.
+  if(l.cavity !== undefined || l.partWeight !== undefined || l.runnerWeight !== undefined){
+    if(l.rms[0]){
+      l.rms[0].cavity = l.rms[0].cavity || l.cavity || '';
+      l.rms[0].partWeight = l.rms[0].partWeight || l.partWeight || '';
+      l.rms[0].runnerWeight = l.rms[0].runnerWeight || l.runnerWeight || '';
+    }
+    delete l.cavity; delete l.partWeight; delete l.runnerWeight;
+  }
+  l.rms.forEach(r=>{
+    r.type = r.type||''; r.material = r.material||''; r.rmCode = r.rmCode||'';
+    r.cavity = r.cavity||''; r.partWeight = r.partWeight||''; r.runnerWeight = r.runnerWeight||'';
+  });
   return l;
 }
 function startNewBom(){
@@ -2320,7 +2341,7 @@ function removeRm(lineIndex, rmIndex){
 }
 function updateRmType(lineIndex, rmIndex, value){
   state.draftBom.lines[lineIndex].rms[rmIndex].type = value;
-  renderContent(); // reveals/hides cavity & weight fields
+  renderContent(); // reveals/hides this RM's cavity & weight fields
   syncDraftBomToState();
 }
 function updateRmMaterial(lineIndex, rmIndex, value){
@@ -2331,25 +2352,25 @@ function updateRmCode(lineIndex, rmIndex, value){
   state.draftBom.lines[lineIndex].rms[rmIndex].rmCode = value;
   syncDraftBomToState();
 }
-function updateBomLineCavity(index, value){
-  state.draftBom.lines[index].cavity = value;
-  updateBomLineWeightShotDisplay(index);
+function updateRmCavity(lineIndex, rmIndex, value){
+  state.draftBom.lines[lineIndex].rms[rmIndex].cavity = value;
+  updateRmWeightShotDisplay(lineIndex, rmIndex);
   syncDraftBomToState();
 }
-function updateBomLinePartWeight(index, value){
-  state.draftBom.lines[index].partWeight = value;
-  updateBomLineWeightShotDisplay(index);
+function updateRmPartWeight(lineIndex, rmIndex, value){
+  state.draftBom.lines[lineIndex].rms[rmIndex].partWeight = value;
+  updateRmWeightShotDisplay(lineIndex, rmIndex);
   syncDraftBomToState();
 }
-function updateBomLineRunnerWeight(index, value){
-  state.draftBom.lines[index].runnerWeight = value;
-  updateBomLineWeightShotDisplay(index);
+function updateRmRunnerWeight(lineIndex, rmIndex, value){
+  state.draftBom.lines[lineIndex].rms[rmIndex].runnerWeight = value;
+  updateRmWeightShotDisplay(lineIndex, rmIndex);
   syncDraftBomToState();
 }
-function updateBomLineWeightShotDisplay(index){
-  const line = state.draftBom.lines[index];
-  const ws = computeWeightShot(line);
-  const el = document.getElementById(`bom-line-weightshot-${index}`);
+function updateRmWeightShotDisplay(lineIndex, rmIndex){
+  const rm = state.draftBom.lines[lineIndex].rms[rmIndex];
+  const ws = computeRmWeightShot(rm);
+  const el = document.getElementById(`rm-weightshot-${lineIndex}-${rmIndex}`);
   if(el) el.textContent = ws === null ? '—' : ws.toLocaleString('en-US',{maximumFractionDigits:2}) + ' g';
 }
 function finishBom(){
@@ -2367,42 +2388,27 @@ function bomBuilderHTML(){
   const d = state.draftBom;
 
   const partsHTML = d.lines.map((line,li)=>{
-    const hasAnyType = line.rms.some(r=>r.type);
-    const ws = computeWeightShot(line);
-
-    const rmRows = line.rms.map((rm,ri)=>`
-      <tr>
+    const rmRows = line.rms.map((rm,ri)=>{
+      const ws = computeRmWeightShot(rm);
+      const weightCells = rm.type ? `
+          <td><input type="number" min="0" step="1" style="width:64px;" value="${rm.cavity}" oninput="updateRmCavity(${li},${ri},this.value)"></td>
+          <td><input type="number" min="0" step="0.01" style="width:80px;" value="${rm.partWeight}" oninput="updateRmPartWeight(${li},${ri},this.value)"></td>
+          <td><input type="number" min="0" step="0.01" style="width:80px;" value="${rm.runnerWeight}" oninput="updateRmRunnerWeight(${li},${ri},this.value)"></td>
+          <td class="mono" id="rm-weightshot-${li}-${ri}">${ws===null?'—':ws.toLocaleString('en-US',{maximumFractionDigits:2})+' g'}</td>` : `
+          <td colspan="4" style="color:var(--text-muted);font-size:12px;text-align:center;">Choose a type to enter cavity &amp; weights</td>`;
+      return `<tr>
         <td>
           <select onchange="updateRmType(${li},${ri},this.value)">
             <option value="">Select…</option>
             ${BOM_TYPES.map(t=>`<option value="${t}" ${t===rm.type?'selected':''}>${t}</option>`).join('')}
           </select>
         </td>
-        <td><input type="text" value="${rm.material||''}" placeholder="Material" oninput="updateRmMaterial(${li},${ri},this.value)"></td>
-        <td><input type="text" value="${rm.rmCode||''}" placeholder="RM Code" oninput="updateRmCode(${li},${ri},this.value)"></td>
+        <td><input type="text" style="width:140px;" value="${rm.material||''}" placeholder="Material" oninput="updateRmMaterial(${li},${ri},this.value)"></td>
+        <td><input type="text" style="width:110px;" value="${rm.rmCode||''}" placeholder="RM Code" oninput="updateRmCode(${li},${ri},this.value)"></td>
+        ${weightCells}
         <td>${line.rms.length>1 ? `<button type="button" class="btn-icon-mini" onclick="removeRm(${li},${ri})" title="Remove RM">${ICONS.trash}</button>` : ''}</td>
-      </tr>`).join('');
-
-    const weightFieldsHTML = hasAnyType ? `
-      <div class="form-grid" style="margin-top:16px;">
-        <div class="field">
-          <label>Cavity</label>
-          <input type="number" min="0" step="1" value="${line.cavity}" oninput="updateBomLineCavity(${li},this.value)">
-        </div>
-        <div class="field">
-          <label>Part Weight (g)</label>
-          <input type="number" min="0" step="0.01" value="${line.partWeight}" oninput="updateBomLinePartWeight(${li},this.value)">
-        </div>
-        <div class="field">
-          <label>Runner Weight (g)</label>
-          <input type="number" min="0" step="0.01" value="${line.runnerWeight}" oninput="updateBomLineRunnerWeight(${li},this.value)">
-        </div>
-        <div class="field">
-          <label>Weight Shot (g)</label>
-          <input class="mono" disabled id="bom-line-weightshot-${li}" value="${ws===null?'—':ws.toLocaleString('en-US',{maximumFractionDigits:2})+' g'}" style="color:var(--text-secondary);">
-        </div>
-      </div>` : `
-      <p style="margin-top:14px;font-size:12px;color:var(--text-muted);">Add an RM with a Type to enter cavity &amp; weights.</p>`;
+      </tr>`;
+    }).join('');
 
     return `
       <div class="table-wrap" style="padding:22px;margin-bottom:16px;">
@@ -2427,15 +2433,17 @@ function bomBuilderHTML(){
           </div>
           ${d.lines.length>1 ? `<button type="button" class="btn-icon-mini" onclick="removeBomLine(${li})" title="Remove part" style="margin-top:4px;">${ICONS.trash}</button>` : ''}
         </div>
-        <div class="section-label" style="margin:0 0 10px;padding-top:0;border-top:none;">Raw Materials (normally just one)</div>
+        <div class="section-label" style="margin:0 0 10px;padding-top:0;border-top:none;">Raw Materials — each RM has its own Cavity/Weight/Weight Shot, normally just one RM</div>
         <div class="table-wrap"><div class="table-scroll">
           <table>
-            <thead><tr><th>Type</th><th>Material</th><th>RM Code</th><th></th></tr></thead>
+            <thead><tr>
+              <th>Type</th><th>Material</th><th>RM Code</th>
+              <th>Cavity</th><th>Part Wt (g)</th><th>Runner Wt (g)</th><th>Weight Shot (g)</th><th></th>
+            </tr></thead>
             <tbody>${rmRows}</tbody>
           </table>
         </div></div>
         <button type="button" class="btn btn-ghost btn-sm" style="margin-top:10px;" onclick="addRm(${li})">${ICONS.plus} Add RM</button>
-        ${weightFieldsHTML}
       </div>`;
   }).join('');
 
@@ -2453,7 +2461,7 @@ function bomBuilderHTML(){
       <button type="button" class="btn btn-ghost btn-sm" onclick="addBomLine()">${ICONS.plus} Add Part</button>
       <button type="button" class="btn btn-primary" onclick="finishBom()">${ICONS.check} Done</button>
     </div>
-    <p style="margin-top:12px;font-size:11.5px;color:var(--text-muted);">Weight Shot = Cavity × Part Weight + Runner Weight.</p>`;
+    <p style="margin-top:12px;font-size:11.5px;color:var(--text-muted);">Weight Shot = Cavity × Part Weight + Runner Weight, calculated separately for each RM.</p>`;
 }
 
 /* ============ KELOLA PERUSAHAAN ============ */
