@@ -1963,9 +1963,11 @@ function bomListHTML(){
   const rows = list.map(b=>{
     const materials = [...new Set(b.lines.map(l=>l.material).filter(Boolean))];
     const subtitle = materials.length ? materials.join(', ') : `${b.lines.length} component${b.lines.length===1?'':'s'}`;
+    const customers = [...new Set(b.lines.map(l=>l.customerName).filter(Boolean))];
     return `<tr>
       <td class="mono">${b.productCode || '—'}</td>
       <td><div class="name-cell"><b>${b.productName}</b><span>${subtitle}</span></div></td>
+      <td>${customers.length ? customers.join(', ') : '—'}</td>
       <td>${b.lines.length} component${b.lines.length===1?'':'s'}</td>
       <td>
         <div class="row-actions">
@@ -1979,7 +1981,7 @@ function bomListHTML(){
   const tableOrEmpty = list.length ? `
     <div class="table-wrap"><div class="table-scroll">
       <table>
-        <thead><tr><th>Part Code</th><th>BOM</th><th>Components</th><th></th></tr></thead>
+        <thead><tr><th>Part Code</th><th>BOM</th><th>Customer</th><th>Components</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div></div>` : `
@@ -2013,21 +2015,21 @@ function triggerBomImport(){
   const input = document.getElementById('bomImportInput');
   if(input) input.click();
 }
-const BOM_EXCEL_HEADERS = ['Part Code','Part No','Part Description','Material','Cavity','Part Weight (g)','Runner Weight (g)','Weight Shot (g)'];
+const BOM_EXCEL_HEADERS = ['Customer Name','Part Code','Part No','Part Description','Material','Cavity','Part Weight (g)','Runner Weight (g)','Weight Shot (g)'];
 function downloadBomTemplate(){
   if(typeof XLSX === 'undefined'){ toast('Excel library did not load — check your connection and try again.'); return; }
 
   const exampleRows = [
-    { 'Part Code':'PC-001', 'Part No':'N-001', 'Part Description':'Cover Top Shell', 'Material':'Resin',
+    { 'Customer Name':'PT Yudo Indonesia', 'Part Code':'PC-001', 'Part No':'N-001', 'Part Description':'Cover Top Shell', 'Material':'Resin',
       'Cavity':4, 'Part Weight (g)':12.5, 'Runner Weight (g)':3.2, 'Weight Shot (g)':'' },
-    { 'Part Code':'PC-002', 'Part No':'N-002', 'Part Description':'Cover Mounting Bracket', 'Material':'Metal Insert',
+    { 'Customer Name':'PT Yudo Indonesia', 'Part Code':'PC-002', 'Part No':'N-002', 'Part Description':'Cover Mounting Bracket', 'Material':'Metal Insert',
       'Cavity':2, 'Part Weight (g)':4.0, 'Runner Weight (g)':1.0, 'Weight Shot (g)':'' }
   ];
   const blankRow = {}; BOM_EXCEL_HEADERS.forEach(h=>blankRow[h]='');
   const blankRows = Array.from({length:15}, ()=>Object.assign({}, blankRow));
 
   const sheet = XLSX.utils.json_to_sheet([...exampleRows, ...blankRows], { header: BOM_EXCEL_HEADERS });
-  sheet['!cols'] = [{wch:12},{wch:10},{wch:26},{wch:14},{wch:8},{wch:14},{wch:15},{wch:15}];
+  sheet['!cols'] = [{wch:22},{wch:12},{wch:10},{wch:26},{wch:14},{wch:8},{wch:14},{wch:15},{wch:15}];
 
   const readMe = [
     ['Wiriya Workspace — BOM Import Template'],
@@ -2059,6 +2061,7 @@ function exportBomsToExcel(){
     b.lines.forEach(line=>{
       const ws = computeWeightShot(line);
       rows.push({
+        'Customer Name': line.customerName || '',
         'Part Code': line.partCode || '',
         'Part No': line.partNo || '',
         'Part Description': line.partDescription || '',
@@ -2103,6 +2106,7 @@ function importBomRows(rows){
   let created = 0, updated = 0;
   validRows.forEach(r=>{
     const line = {
+      customerName: String(r['Customer Name']||'').trim(),
       partCode: String(r['Part Code']||'').trim(),
       partNo: String(r['Part No']||'').trim(),
       partDescription: String(r['Part Description']||'').trim(),
@@ -2140,7 +2144,7 @@ function importBomRows(rows){
 
 /* ---- Builder (auto-saves as you go — press Done to finish) ---- */
 function emptyBomLine(){
-  return { partCode:'', partNo:'', partDescription:'', material:'', cavity:'', partWeight:'', runnerWeight:'' };
+  return { customerName:'', partCode:'', partNo:'', partDescription:'', material:'', cavity:'', partWeight:'', runnerWeight:'' };
 }
 function startNewBom(){
   state.editingBomId = null;
@@ -2154,6 +2158,7 @@ function editBom(id){
   state.editingBomId = id;
   state.draftBom = { lines: JSON.parse(JSON.stringify(b.lines)) };
   state.draftBom.lines.forEach(l=>{
+    l.customerName = l.customerName || '';
     l.partCode = l.partCode || ''; l.partNo = l.partNo || ''; l.partDescription = l.partDescription || '';
     l.material = l.material || ''; l.cavity = l.cavity || ''; l.partWeight = l.partWeight || ''; l.runnerWeight = l.runnerWeight || '';
   });
@@ -2210,6 +2215,10 @@ function removeBomLine(index){
   state.draftBom.lines.splice(index,1);
   if(!state.draftBom.lines.length) state.draftBom.lines.push(emptyBomLine());
   renderContent();
+  syncDraftBomToState();
+}
+function updateBomLineCustomerName(index, value){
+  state.draftBom.lines[index].customerName = value;
   syncDraftBomToState();
 }
 function updateBomLinePartCode(index, value){
@@ -2273,6 +2282,7 @@ function bomBuilderHTML(){
         <td class="mono" id="bom-line-weightshot-${li}">${ws===null?'—':ws.toLocaleString('en-US',{maximumFractionDigits:2})+' g'}</td>` : `
         <td colspan="4" style="color:var(--text-muted);font-size:12px;text-align:center;">Choose a material to enter cavity &amp; weights</td>`;
     return `<tr>
+      <td><input type="text" style="width:150px;" value="${line.customerName||''}" placeholder="Customer name" oninput="updateBomLineCustomerName(${li},this.value)"></td>
       <td><input type="text" style="width:100px;" value="${line.partCode||''}" placeholder="Code" oninput="updateBomLinePartCode(${li},this.value)"></td>
       <td><input type="text" style="width:100px;" value="${line.partNo||''}" placeholder="No." oninput="updateBomLinePartNo(${li},this.value)"></td>
       <td><input type="text" style="width:220px;" value="${line.partDescription||''}" placeholder="Part description" oninput="updateBomLinePartDescription(${li},this.value)"></td>
@@ -2300,7 +2310,7 @@ function bomBuilderHTML(){
       <div class="table-scroll">
         <table class="comparison-table">
           <thead><tr>
-            <th>Part Code</th><th>Part No</th><th>Part Description</th><th>Material</th>
+            <th>Customer Name</th><th>Part Code</th><th>Part No</th><th>Part Description</th><th>Material</th>
             <th>Cavity</th><th>Part Wt (g)</th><th>Runner Wt (g)</th><th>Weight Shot (g)</th><th></th>
           </tr></thead>
           <tbody>
