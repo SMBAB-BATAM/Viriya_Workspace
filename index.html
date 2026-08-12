@@ -2015,6 +2015,7 @@ function bomListHTML(){
         <p>BOMs for ${c.nama} — ${list.length} saved.</p>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-ghost" onclick="downloadBomTemplate()">${ICONS.tag} Download Template</button>
         <button class="btn btn-ghost" onclick="triggerBomImport()">${ICONS.plus} Import Excel</button>
         <button class="btn btn-ghost" onclick="exportBomsToExcel()">${ICONS.history} Export Excel</button>
         <button class="btn btn-primary" onclick="startNewBom()">${ICONS.plus} New BOM</button>
@@ -2028,6 +2029,54 @@ function bomListHTML(){
 function triggerBomImport(){
   const input = document.getElementById('bomImportInput');
   if(input) input.click();
+}
+function downloadBomTemplate(){
+  if(typeof XLSX === 'undefined'){ toast('Excel library did not load — check your connection and try again.'); return; }
+
+  const headers = ['Product Name','Product Code','Description','Part Code','Part No','Part Description','Material','Cavity','Part Weight (g)','Runner Weight (g)','Weight Shot (g)','Item (Item Master)','Qty','UOM','Notes'];
+
+  const exampleRows = [
+    { 'Product Name':'Injection Mold Cover Assembly', 'Product Code':'ASM-0012', 'Description':'Plastic cover for control panel housing',
+      'Part Code':'PC-001', 'Part No':'N-001', 'Part Description':'Cover Top Shell', 'Material':'Resin',
+      'Cavity':4, 'Part Weight (g)':12.5, 'Runner Weight (g)':3.2, 'Weight Shot (g)':'',
+      'Item (Item Master)':'PP Resin Natural', 'Qty':1, 'UOM':'pcs', 'Notes':'Main body, ABS alt if OOS' },
+    { 'Product Name':'Injection Mold Cover Assembly', 'Product Code':'ASM-0012', 'Description':'Plastic cover for control panel housing',
+      'Part Code':'PC-002', 'Part No':'N-002', 'Part Description':'Cover Mounting Bracket', 'Material':'Metal Insert',
+      'Cavity':2, 'Part Weight (g)':4.0, 'Runner Weight (g)':1.0, 'Weight Shot (g)':'',
+      'Item (Item Master)':'', 'Qty':4, 'UOM':'pcs', 'Notes':'Brass insert, heat-staked' }
+  ];
+  // A few empty rows ready to fill in
+  const blankRow = {}; headers.forEach(h=>blankRow[h]='');
+  const blankRows = Array.from({length:12}, ()=>Object.assign({}, blankRow));
+
+  const sheet = XLSX.utils.json_to_sheet([...exampleRows, ...blankRows], { header: headers });
+  sheet['!cols'] = [
+    {wch:26},{wch:14},{wch:30},{wch:12},{wch:10},{wch:22},{wch:12},
+    {wch:8},{wch:13},{wch:14},{wch:14},{wch:22},{wch:8},{wch:8},{wch:20}
+  ];
+
+  const readMe = [
+    ['Wiriya Workspace — BOM Import Template'],
+    [''],
+    ['How to use this file'],
+    ["1. Go to the 'BOM' sheet."],
+    ['2. The first 2 rows are EXAMPLE rows — showing the expected format. Delete them or leave them; they will just create an example BOM.'],
+    ['3. The blank rows below are ready for your data. Add more rows if you need more.'],
+    ["4. Rows with the SAME 'Product Name' + 'Product Code' become components of the SAME BOM."],
+    ["5. 'Material' only accepts exactly: Resin, MB, Metal Insert, or Other."],
+    ["6. 'Cavity', 'Part Weight (g)', 'Runner Weight (g)' only matter if Material is filled in — otherwise leave them blank."],
+    ["7. 'Weight Shot (g)' is calculated automatically by the app — you can leave it blank."],
+    ["8. 'Item (Item Master)' is optional. Only fill it in if the part already exists in Item Master (spell it exactly the same) — this links live pricing to the BOM."],
+    ['9. Save this file, then in Wiriya Workspace go to PMC → BOM → Import Excel and select it.'],
+    ['10. Importing again later with the same Product Code will UPDATE that BOM rather than duplicate it.']
+  ];
+  const readMeSheet = XLSX.utils.aoa_to_sheet(readMe);
+  readMeSheet['!cols'] = [{wch:100}];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, sheet, 'BOM');
+  XLSX.utils.book_append_sheet(wb, readMeSheet, 'Read Me');
+  XLSX.writeFile(wb, 'BOM_Import_Template.xlsx');
 }
 function exportBomsToExcel(){
   if(typeof XLSX === 'undefined'){ toast('Excel library did not load — check your connection and try again.'); return; }
