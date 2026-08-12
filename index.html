@@ -6,6 +6,7 @@
 <title>Wiriya Workspace</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root{
     --bg:#12151b;
@@ -513,6 +514,21 @@
         <div class="nav-item" id="nav-bom" onclick="navigate('bom')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h6a1 1 0 0 1 1 1v2H8V3a1 1 0 0 1 1-1Z"/><path d="M8 5H6a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>
           BOM
+        </div>
+        <div class="nav-item disabled">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+          Demand Sales
+          <span class="nav-tag">SOON</span>
+        </div>
+        <div class="nav-item disabled">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/><path d="M15 9h4v4"/></svg>
+          Forecast Sales
+          <span class="nav-tag">SOON</span>
+        </div>
+        <div class="nav-item disabled">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+          MRP Planning
+          <span class="nav-tag">SOON</span>
         </div>
       </div>
     </div>
@@ -1919,6 +1935,7 @@ function comparisonBuilderHTML(){
 }
 
 /* ============ BOM (Bill of Materials) ============ */
+const BOM_MATERIALS = ['Resin','MB','Metal Insert','Other'];
 function companyBoms(){
   return state.boms.filter(b=>b.companyId===state.currentCompanyId);
 }
@@ -1944,6 +1961,13 @@ function computeBomTotalCost(bom){
     else { mixedCurrency = true; }
   });
   return { total, mixedCurrency };
+}
+function computeWeightShot(line){
+  if(!line.material) return null;
+  const cavity = parseFloat(line.cavity) || 0;
+  const partWeight = parseFloat(line.partWeight) || 0;
+  const runnerWeight = parseFloat(line.runnerWeight) || 0;
+  return (cavity * partWeight) + runnerWeight;
 }
 
 function bomHTML(){
@@ -1979,7 +2003,7 @@ function bomListHTML(){
     <div class="table-wrap"><div class="empty-state">
       <div class="stamp">${ICONS.tag}<span>EMPTY</span></div>
       <h3>No BOMs yet</h3>
-      <p>Create a Bill of Materials to define what components go into each product.</p>
+      <p>Create a Bill of Materials to define what components go into each product, or import one from Excel.</p>
       <button class="btn btn-primary btn-sm" onclick="startNewBom()">${ICONS.plus} New BOM</button>
     </div></div>`;
 
@@ -1990,12 +2014,136 @@ function bomListHTML(){
         <h2>Bill of Materials</h2>
         <p>BOMs for ${c.nama} — ${list.length} saved.</p>
       </div>
-      <button class="btn btn-primary" onclick="startNewBom()">${ICONS.plus} New BOM</button>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-ghost" onclick="triggerBomImport()">${ICONS.plus} Import Excel</button>
+        <button class="btn btn-ghost" onclick="exportBomsToExcel()">${ICONS.history} Export Excel</button>
+        <button class="btn btn-primary" onclick="startNewBom()">${ICONS.plus} New BOM</button>
+      </div>
     </div>
+    <input type="file" id="bomImportInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleBomImport(event)">
     ${tableOrEmpty}`;
 }
+
+/* ---- Import / Export (Excel via SheetJS) ---- */
+function triggerBomImport(){
+  const input = document.getElementById('bomImportInput');
+  if(input) input.click();
+}
+function exportBomsToExcel(){
+  if(typeof XLSX === 'undefined'){ toast('Excel library did not load — check your connection and try again.'); return; }
+  const list = companyBoms();
+  if(!list.length){ toast('No BOMs to export yet'); return; }
+  const rows = [];
+  list.forEach(b=>{
+    b.lines.forEach(line=>{
+      const item = state.items.find(x=>x.id===line.itemId);
+      const ws = computeWeightShot(line);
+      rows.push({
+        'Product Name': b.productName,
+        'Product Code': b.productCode,
+        'Description': b.description,
+        'Part Code': line.partCode || '',
+        'Part No': line.partNo || '',
+        'Part Description': line.partDescription || '',
+        'Material': line.material || '',
+        'Cavity': line.cavity || '',
+        'Part Weight (g)': line.partWeight || '',
+        'Runner Weight (g)': line.runnerWeight || '',
+        'Weight Shot (g)': ws === null ? '' : ws,
+        'Item (Item Master)': item ? item.nama : '',
+        'Qty': line.qty,
+        'UOM': line.uom || '',
+        'Notes': line.notes || ''
+      });
+    });
+  });
+  const sheet = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, sheet, 'BOM');
+  const c = currentCompany();
+  XLSX.writeFile(wb, `BOM_${c.kode}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+function handleBomImport(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  if(typeof XLSX === 'undefined'){ toast('Excel library did not load — check your connection and try again.'); e.target.value=''; return; }
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    try{
+      const data = new Uint8Array(evt.target.result);
+      const wb = XLSX.read(data, { type:'array' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval:'' });
+      importBomRows(rows);
+    } catch(err){
+      console.error(err);
+      toast('Could not read that file. Make sure it matches the exported column format.');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  e.target.value = '';
+}
+function importBomRows(rows){
+  if(!rows.length){ toast('No rows found in that file'); return; }
+  const items = companyItems();
+  const grouped = {};
+  rows.forEach(r=>{
+    const productName = String(r['Product Name']||'').trim();
+    if(!productName) return;
+    const productCode = String(r['Product Code']||'').trim();
+    const key = productCode || productName;
+    if(!grouped[key]){
+      grouped[key] = { productName, productCode, description: String(r['Description']||'').trim(), lines: [] };
+    }
+    const itemName = String(r['Item (Item Master)']||'').trim();
+    const matchedItem = itemName ? items.find(it=>it.nama.toLowerCase()===itemName.toLowerCase()) : null;
+    grouped[key].lines.push({
+      itemId: matchedItem ? matchedItem.id : '',
+      qty: parseFloat(r['Qty']) || 0,
+      uom: String(r['UOM']||'').trim(),
+      notes: String(r['Notes']||'').trim(),
+      partCode: String(r['Part Code']||'').trim(),
+      partNo: String(r['Part No']||'').trim(),
+      partDescription: String(r['Part Description']||'').trim(),
+      material: String(r['Material']||'').trim(),
+      cavity: r['Cavity'] !== '' ? String(r['Cavity']) : '',
+      partWeight: r['Part Weight (g)'] !== '' ? String(r['Part Weight (g)']) : '',
+      runnerWeight: r['Runner Weight (g)'] !== '' ? String(r['Runner Weight (g)']) : ''
+    });
+  });
+
+  let created = 0, updated = 0;
+  Object.values(grouped).forEach(g=>{
+    const existing = state.boms.find(b => b.companyId===state.currentCompanyId &&
+      ((g.productCode && b.productCode===g.productCode) || (!g.productCode && b.productName===g.productName)));
+    if(existing){
+      existing.productName = g.productName;
+      existing.description = g.description;
+      existing.lines = g.lines;
+      existing.updatedAt = new Date().toISOString();
+      updated++;
+    } else {
+      state.boms.push({
+        id: 'bom'+Date.now()+Math.random().toString(36).slice(2,7),
+        companyId: state.currentCompanyId,
+        productName: g.productName,
+        productCode: g.productCode,
+        description: g.description,
+        lines: g.lines,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+      created++;
+    }
+  });
+  renderContent();
+  toast(`Imported: ${created} new, ${updated} updated`);
+  scheduleSave();
+}
+
+/* ---- Builder (auto-saves as you go — press Done to finish) ---- */
 function emptyBomLine(){
-  return { itemId:'', qty:1, uom:'pcs', notes:'' };
+  return { itemId:'', qty:1, uom:'pcs', notes:'', partCode:'', partNo:'', partDescription:'', material:'', cavity:'', partWeight:'', runnerWeight:'' };
 }
 function startNewBom(){
   state.editingBomId = null;
@@ -2013,10 +2161,14 @@ function editBom(id){
   if(!b) return;
   state.editingBomId = id;
   state.draftBom = JSON.parse(JSON.stringify(b));
+  state.draftBom.lines.forEach(l=>{
+    l.partCode = l.partCode || ''; l.partNo = l.partNo || ''; l.partDescription = l.partDescription || '';
+    l.material = l.material || ''; l.cavity = l.cavity || ''; l.partWeight = l.partWeight || ''; l.runnerWeight = l.runnerWeight || '';
+  });
   state.bomMode = 'builder';
   renderContent();
 }
-function cancelBomBuilder(){
+function backToBomList(){
   state.draftBom = null;
   state.editingBomId = null;
   state.bomMode = 'list';
@@ -2031,6 +2183,32 @@ function deleteBom(id){
   toast('BOM deleted');
   scheduleSave();
 }
+
+// Auto-save: every field change syncs the draft into state.boms and
+// schedules a debounced save to Drive — no manual "Save" step needed.
+function syncDraftBomToState(){
+  const d = state.draftBom;
+  if(!d.productName || !d.productName.trim()) return; // wait until it's at least named
+  const id = state.editingBomId || (state.editingBomId = 'bom'+Date.now());
+  const record = {
+    id,
+    companyId: state.currentCompanyId,
+    productName: d.productName.trim(),
+    productCode: (d.productCode||'').trim(),
+    description: (d.description||'').trim(),
+    lines: JSON.parse(JSON.stringify(d.lines)),
+    updatedAt: new Date().toISOString()
+  };
+  const idx = state.boms.findIndex(x=>x.id===id);
+  if(idx>=0){
+    state.boms[idx] = Object.assign({createdAt: state.boms[idx].createdAt}, record);
+  } else {
+    record.createdAt = new Date().toISOString();
+    state.boms.push(record);
+  }
+  scheduleSave();
+}
+
 function addBomLine(){
   state.draftBom.lines.push(emptyBomLine());
   renderContent();
@@ -2039,24 +2217,62 @@ function removeBomLine(index){
   state.draftBom.lines.splice(index,1);
   if(!state.draftBom.lines.length) state.draftBom.lines.push(emptyBomLine());
   renderContent();
+  syncDraftBomToState();
 }
 function updateBomMeta(field, value){
   state.draftBom[field] = value;
+  syncDraftBomToState();
 }
 function updateBomLineItem(index, itemId){
   state.draftBom.lines[index].itemId = itemId;
   renderContent();
+  syncDraftBomToState();
 }
 function updateBomLineQty(index, value){
   state.draftBom.lines[index].qty = parseFloat(value) || 0;
   updateBomLineCostDisplay(index);
   updateBomGrandTotal();
+  syncDraftBomToState();
 }
 function updateBomLineUom(index, value){
   state.draftBom.lines[index].uom = value;
+  syncDraftBomToState();
 }
 function updateBomLineNotes(index, value){
   state.draftBom.lines[index].notes = value;
+  syncDraftBomToState();
+}
+function updateBomLinePartCode(index, value){
+  state.draftBom.lines[index].partCode = value;
+  syncDraftBomToState();
+}
+function updateBomLinePartNo(index, value){
+  state.draftBom.lines[index].partNo = value;
+  syncDraftBomToState();
+}
+function updateBomLinePartDescription(index, value){
+  state.draftBom.lines[index].partDescription = value;
+  syncDraftBomToState();
+}
+function updateBomLineMaterial(index, value){
+  state.draftBom.lines[index].material = value;
+  renderContent(); // material choice reveals/hides the weight fields
+  syncDraftBomToState();
+}
+function updateBomLineCavity(index, value){
+  state.draftBom.lines[index].cavity = value;
+  updateBomLineWeightShotDisplay(index);
+  syncDraftBomToState();
+}
+function updateBomLinePartWeight(index, value){
+  state.draftBom.lines[index].partWeight = value;
+  updateBomLineWeightShotDisplay(index);
+  syncDraftBomToState();
+}
+function updateBomLineRunnerWeight(index, value){
+  state.draftBom.lines[index].runnerWeight = value;
+  updateBomLineWeightShotDisplay(index);
+  syncDraftBomToState();
 }
 function updateBomLineCostDisplay(index){
   const line = state.draftBom.lines[index];
@@ -2064,42 +2280,28 @@ function updateBomLineCostDisplay(index){
   const el = document.getElementById(`bom-line-cost-${index}`);
   if(el) el.textContent = cost ? formatMoney(cost.amount, cost.currency) : '—';
 }
+function updateBomLineWeightShotDisplay(index){
+  const line = state.draftBom.lines[index];
+  const ws = computeWeightShot(line);
+  const el = document.getElementById(`bom-line-weightshot-${index}`);
+  if(el) el.textContent = ws === null ? '—' : ws.toLocaleString('en-US',{maximumFractionDigits:2}) + ' g';
+}
 function updateBomGrandTotal(){
   const { total, mixedCurrency } = computeBomTotalCost(state.draftBom);
   const el = document.getElementById('bom-grand-total');
   if(el) el.textContent = total ? formatMoney(total.amount, total.currency) + (mixedCurrency ? ' + other currencies' : '') : '—';
 }
-function saveBom(){
+function finishBom(){
   const d = state.draftBom;
-  const productName = d.productName.trim();
-  if(!productName){ toast('Product name is required'); return; }
-  const validLines = d.lines.filter(l=>l.itemId);
-  if(!validLines.length){ toast('Add at least one component'); return; }
-
-  const record = {
-    id: state.editingBomId || 'bom'+Date.now(),
-    companyId: state.currentCompanyId,
-    productName,
-    productCode: d.productCode.trim(),
-    description: d.description.trim(),
-    lines: JSON.parse(JSON.stringify(validLines)),
-    updatedAt: new Date().toISOString()
-  };
-
-  if(state.editingBomId){
-    const idx = state.boms.findIndex(x=>x.id===state.editingBomId);
-    state.boms[idx] = Object.assign({createdAt: state.boms[idx].createdAt}, record);
-  } else {
-    record.createdAt = new Date().toISOString();
-    state.boms.push(record);
-  }
-
+  if(!d.productName.trim()){ toast('Product name is required'); return; }
+  const hasContent = d.lines.some(l=>l.itemId || l.partCode || l.partNo || l.partDescription);
+  if(!hasContent){ toast('Add at least one component'); return; }
+  syncDraftBomToState();
   state.draftBom = null;
   state.editingBomId = null;
   state.bomMode = 'list';
   toast('BOM saved');
   renderContent();
-  scheduleSave();
 }
 function bomBuilderHTML(){
   const d = state.draftBom;
@@ -2108,16 +2310,33 @@ function bomBuilderHTML(){
 
   const rowsHTML = d.lines.map((line,li)=>{
     const cost = computeBomLineCost(line);
+    const ws = computeWeightShot(line);
+    const weightCells = line.material ? `
+        <td><input type="number" min="0" step="1" style="width:64px;" value="${line.cavity}" oninput="updateBomLineCavity(${li},this.value)"></td>
+        <td><input type="number" min="0" step="0.01" style="width:80px;" value="${line.partWeight}" oninput="updateBomLinePartWeight(${li},this.value)"></td>
+        <td><input type="number" min="0" step="0.01" style="width:80px;" value="${line.runnerWeight}" oninput="updateBomLineRunnerWeight(${li},this.value)"></td>
+        <td class="mono" id="bom-line-weightshot-${li}">${ws===null?'—':ws.toLocaleString('en-US',{maximumFractionDigits:2})+' g'}</td>` : `
+        <td colspan="4" style="color:var(--text-muted);font-size:12px;text-align:center;">Choose a material to enter cavity &amp; weights</td>`;
     return `<tr>
+      <td><input type="text" style="width:90px;" value="${line.partCode||''}" placeholder="Code" oninput="updateBomLinePartCode(${li},this.value)"></td>
+      <td><input type="text" style="width:90px;" value="${line.partNo||''}" placeholder="No." oninput="updateBomLinePartNo(${li},this.value)"></td>
+      <td><input type="text" style="width:140px;" value="${line.partDescription||''}" placeholder="Part description" oninput="updateBomLinePartDescription(${li},this.value)"></td>
+      <td>
+        <select onchange="updateBomLineMaterial(${li},this.value)">
+          <option value="">Select…</option>
+          ${BOM_MATERIALS.map(m=>`<option value="${m}" ${m===line.material?'selected':''}>${m}</option>`).join('')}
+        </select>
+      </td>
+      ${weightCells}
       <td>
         <select onchange="updateBomLineItem(${li},this.value)">
-          <option value="">Select item…</option>
+          <option value="">— none —</option>
           ${items.map(it=>`<option value="${it.id}" ${it.id===line.itemId?'selected':''}>${it.nama} (${it.category})</option>`).join('')}
         </select>
       </td>
-      <td><input type="number" min="0" step="0.01" style="width:80px;" value="${line.qty}" oninput="updateBomLineQty(${li},this.value)"></td>
-      <td><input type="text" style="width:70px;" value="${line.uom||''}" placeholder="pcs" oninput="updateBomLineUom(${li},this.value)"></td>
-      <td><input type="text" value="${line.notes||''}" placeholder="Notes" oninput="updateBomLineNotes(${li},this.value)"></td>
+      <td><input type="number" min="0" step="0.01" style="width:64px;" value="${line.qty}" oninput="updateBomLineQty(${li},this.value)"></td>
+      <td><input type="text" style="width:60px;" value="${line.uom||''}" placeholder="pcs" oninput="updateBomLineUom(${li},this.value)"></td>
+      <td><input type="text" style="width:110px;" value="${line.notes||''}" placeholder="Notes" oninput="updateBomLineNotes(${li},this.value)"></td>
       <td class="mono" id="bom-line-cost-${li}">${cost ? formatMoney(cost.amount, cost.currency) : '—'}</td>
       <td><button type="button" class="btn-icon-mini" onclick="removeBomLine(${li})" title="Remove component">${ICONS.trash}</button></td>
     </tr>`;
@@ -2128,9 +2347,9 @@ function bomBuilderHTML(){
       <div>
         <div class="eyebrow">PMC</div>
         <h2>${state.editingBomId ? 'Edit BOM' : 'New BOM'}</h2>
-        <p>Define the components that make up this product, pulled from Item Master.</p>
+        <p>Changes save automatically as you type. Press Done when you're finished.</p>
       </div>
-      <button class="btn btn-ghost" onclick="cancelBomBuilder()">Back to list</button>
+      <button class="btn btn-ghost" onclick="backToBomList()">Back to list</button>
     </div>
     <div class="table-wrap" style="padding:22px;margin-bottom:18px;">
       <div class="form-grid">
@@ -2150,12 +2369,16 @@ function bomBuilderHTML(){
     </div>
     <div class="table-wrap">
       <div class="table-scroll">
-        <table>
-          <thead><tr><th>Component (from Item Master)</th><th>Qty</th><th>UOM</th><th>Notes</th><th>Est. Cost</th><th></th></tr></thead>
+        <table class="comparison-table">
+          <thead><tr>
+            <th>Part Code</th><th>Part No</th><th>Part Description</th><th>Material</th>
+            <th>Cavity</th><th>Part Wt (g)</th><th>Runner Wt (g)</th><th>Weight Shot (g)</th>
+            <th>Linked Item (optional)</th><th>Qty</th><th>UOM</th><th>Notes</th><th>Est. Cost</th><th></th>
+          </tr></thead>
           <tbody>
             ${rowsHTML}
             <tr class="grandtotal-row">
-              <td colspan="4" style="text-align:right;font-weight:700;">Estimated Cost per Unit</td>
+              <td colspan="12" style="text-align:right;font-weight:700;">Estimated Cost per Unit</td>
               <td class="mono" id="bom-grand-total" style="font-weight:700;">${total ? formatMoney(total.amount, total.currency) + (mixedCurrency ? ' + other currencies' : '') : '—'}</td>
               <td></td>
             </tr>
@@ -2165,12 +2388,9 @@ function bomBuilderHTML(){
     </div>
     <div style="margin-top:14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <button type="button" class="btn btn-ghost btn-sm" onclick="addBomLine()">${ICONS.plus} Add Component</button>
-      <div style="display:flex;gap:10px;">
-        <button type="button" class="btn btn-ghost" onclick="cancelBomBuilder()">Cancel</button>
-        <button type="button" class="btn btn-primary" onclick="saveBom()">Save BOM</button>
-      </div>
+      <button type="button" class="btn btn-primary" onclick="finishBom()">${ICONS.check} Done</button>
     </div>
-    <p style="margin-top:12px;font-size:11.5px;color:var(--text-muted);">Estimated cost uses each item's latest recorded price from Item Master. Items with no price yet are excluded from the total.</p>`;
+    <p style="margin-top:12px;font-size:11.5px;color:var(--text-muted);">Weight Shot = Cavity × Part Weight + Runner Weight. Estimated cost uses each linked item's latest recorded price from Item Master.</p>`;
 }
 
 /* ============ KELOLA PERUSAHAAN ============ */
