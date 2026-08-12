@@ -1960,28 +1960,44 @@ function bomHTML(){
 function bomListHTML(){
   const c = currentCompany();
   const list = companyBoms();
-  const rows = list.map(b=>{
-    const materials = [...new Set(b.lines.map(l=>l.material).filter(Boolean))];
-    const subtitle = materials.length ? materials.join(', ') : `${b.lines.length} component${b.lines.length===1?'':'s'}`;
-    const customers = [...new Set(b.lines.map(l=>l.customerName).filter(Boolean))];
+
+  // Flatten to one row per component line so every field is visible
+  // directly in the list — no need to open a BOM to see its details.
+  const flatRows = [];
+  list.forEach(b=>{
+    b.lines.forEach((line, lineIndex)=>{
+      flatRows.push({ bom: b, line, lineIndex });
+    });
+  });
+
+  const rows = flatRows.map(({bom, line})=>{
+    const ws = computeWeightShot(line);
     return `<tr>
-      <td class="mono">${b.productCode || '—'}</td>
-      <td><div class="name-cell"><b>${b.productName}</b><span>${subtitle}</span></div></td>
-      <td>${customers.length ? customers.join(', ') : '—'}</td>
-      <td>${b.lines.length} component${b.lines.length===1?'':'s'}</td>
+      <td>${line.customerName || '—'}</td>
+      <td class="mono">${line.partCode || '—'}</td>
+      <td>${line.partNo || '—'}</td>
+      <td>${line.partDescription || '—'}</td>
+      <td>${line.material ? `<span class="badge">${line.material}</span>` : '—'}</td>
+      <td class="mono">${line.cavity || '—'}</td>
+      <td class="mono">${line.partWeight || '—'}</td>
+      <td class="mono">${line.runnerWeight || '—'}</td>
+      <td class="mono">${ws===null?'—':ws.toLocaleString('en-US',{maximumFractionDigits:2})+' g'}</td>
       <td>
         <div class="row-actions">
-          <button onclick="editBom('${b.id}')" title="Open">${ICONS.edit}</button>
-          <button class="del" onclick="deleteBom('${b.id}')" title="Delete">${ICONS.trash}</button>
+          <button onclick="editBom('${bom.id}')" title="Edit">${ICONS.edit}</button>
+          <button class="del" onclick="deleteBom('${bom.id}')" title="Delete">${ICONS.trash}</button>
         </div>
       </td>
     </tr>`;
   }).join('');
 
-  const tableOrEmpty = list.length ? `
+  const tableOrEmpty = flatRows.length ? `
     <div class="table-wrap"><div class="table-scroll">
       <table>
-        <thead><tr><th>Part Code</th><th>BOM</th><th>Customer</th><th>Components</th><th></th></tr></thead>
+        <thead><tr>
+          <th>Customer</th><th>Part Code</th><th>Part No</th><th>Part Description</th><th>Material</th>
+          <th>Cavity</th><th>Part Wt (g)</th><th>Runner Wt (g)</th><th>Weight Shot (g)</th><th></th>
+        </tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div></div>` : `
