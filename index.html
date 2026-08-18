@@ -473,6 +473,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
         Dashboard
       </div>
+      <div class="nav-item" id="nav-my-notes" onclick="navigate('my-notes')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        My Notes
+      </div>
     </div>
     <div class="nav-section">
       <div class="nav-label">Modules</div>
@@ -858,6 +862,55 @@
   </div>
 </div>
 
+<!-- ===================== NOTE MODAL ===================== -->
+<div class="modal-overlay" id="noteModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h3 id="noteModalTitle">Add Note</h3>
+        <p>Track a task or problem you need to follow up on.</p>
+      </div>
+      <button class="modal-close" onclick="closeNoteModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field span-2">
+          <label>Title</label>
+          <input id="nt-title" placeholder="e.g. Follow up mold delivery delay with M-TEC">
+        </div>
+        <div class="field span-2">
+          <label>Details</label>
+          <textarea id="nt-description" placeholder="What's the problem, and what needs to happen next?"></textarea>
+        </div>
+        <div class="field">
+          <label>Start Date</label>
+          <input id="nt-start" type="date">
+        </div>
+        <div class="field">
+          <label>Finish Date</label>
+          <input id="nt-finish" type="date">
+        </div>
+        <div class="field span-2">
+          <label>Status</label>
+          <select id="nt-status">
+            <option value="Open">Open</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Done">Done</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot" style="justify-content:flex-end;">
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-ghost" onclick="closeNoteModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveNote()">Save Note</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>
   <span id="toastMsg">Saved</span>
@@ -898,6 +951,7 @@ let state = {
   items: [],
   comparisons: [],
   boms: [],
+  notes: [],
   currentCompanyId: null,
   activeMenu: 'dashboard',
   editingSupplierId: null,
@@ -909,6 +963,7 @@ let state = {
   editingBomId: null,
   bomMode: 'list',
   draftBom: null,
+  editingNoteId: null,
   tempPhoto: null,
   filters: {search:'', kategori:''},
   itemFilters: {search:'', category:''}
@@ -1008,6 +1063,7 @@ async function loadFromServer(){
       state.categoriesItem = json.categoriesItem || state.categoriesItem;
       state.boms = json.boms || state.boms;
       state.boms.forEach(b => b.lines.forEach(migrateBomLine_));
+      state.notes = json.notes || state.notes;
     }
     dataLoaded = true;
     setSyncStatus('synced');
@@ -1047,6 +1103,7 @@ function snapshotData(){
     currencies: state.currencies,
     categoriesItem: state.categoriesItem,
     boms: state.boms,
+    notes: state.notes,
     savedAt: new Date().toISOString()
   };
 }
@@ -1193,6 +1250,7 @@ function togglePmcMenu(){
 }
 const NAV_MAP = {
   'dashboard':'nav-dashboard',
+  'my-notes':'nav-my-notes',
   'master-supplier':'nav-master-supplier',
   'item-master':'nav-item-master',
   'comparison':'nav-comparison',
@@ -1211,6 +1269,7 @@ function navigate(menu){
 function renderContent(){
   const el = document.getElementById('content');
   if(state.activeMenu==='dashboard') el.innerHTML = dashboardHTML();
+  else if(state.activeMenu==='my-notes') el.innerHTML = notesHTML();
   else if(state.activeMenu==='master-supplier'){ el.innerHTML = masterSupplierHTML(); bindSupplierEvents(); }
   else if(state.activeMenu==='item-master'){ el.innerHTML = itemMasterHTML(); bindItemEvents(); }
   else if(state.activeMenu==='comparison'){ el.innerHTML = comparisonHTML(); }
@@ -1227,6 +1286,7 @@ function dashboardHTML(){
   const itemsCount = companyItems().length;
   const comparisonsCount = state.comparisons.filter(x=>x.companyId===state.currentCompanyId).length;
   const bomsCount = state.boms.filter(x=>x.companyId===state.currentCompanyId).length;
+  const openNotesCount = companyNotes().filter(n=>n.status!=='Done').length;
   const c = currentCompany();
   return `
     <div class="page-head">
@@ -1242,6 +1302,7 @@ function dashboardHTML(){
       <div class="kpi-card"><div class="label">Items Registered ${ICONS.tag}</div><div class="value">${itemsCount}</div><div class="sub">in item master</div></div>
       <div class="kpi-card"><div class="label">Comparisons Saved ${ICONS.history}</div><div class="value">${comparisonsCount}</div><div class="sub">price comparisons on record</div></div>
       <div class="kpi-card"><div class="label">BOMs Created ${ICONS.tag}</div><div class="value">${bomsCount}</div><div class="sub">bills of material on record</div></div>
+      <div class="kpi-card"><div class="label">Open Notes ${ICONS.history}</div><div class="value">${openNotesCount}</div><div class="sub">need follow-up</div></div>
       <div class="kpi-card"><div class="label">Business Categories ${ICONS.tag}</div><div class="value">${cats}</div><div class="sub">distinct categories recorded</div></div>
       <div class="kpi-card"><div class="label">Registered Companies ${ICONS.building}</div><div class="value">${state.companies.length}</div><div class="sub">workspaces available</div></div>
     </div>
@@ -1252,6 +1313,117 @@ function dashboardHTML(){
         <p>Start with Master Supplier to make sure vendor data is complete and accurate before processing purchase requests.</p>
       </div>
     </div>`;
+}
+
+/* ============ MY NOTES ============ */
+function companyNotes(){
+  return state.notes.filter(n=>n.companyId===state.currentCompanyId);
+}
+function notesHTML(){
+  const c = currentCompany();
+  const list = companyNotes().slice().sort((a,b)=>{
+    // Open/In Progress first (soonest finish date first), Done last
+    if((a.status==='Done') !== (b.status==='Done')) return a.status==='Done' ? 1 : -1;
+    return (a.finishDate||'9999').localeCompare(b.finishDate||'9999');
+  });
+
+  const today = new Date().toISOString().slice(0,10);
+  const rows = list.map(n=>{
+    const overdue = n.status!=='Done' && n.finishDate && n.finishDate < today;
+    const statusClass = n.status==='Done' ? 'success' : (overdue ? 'danger' : 'accent');
+    const statusLabel = overdue ? 'Overdue' : n.status;
+    return `<tr>
+      <td><div class="name-cell"><b>${n.title}</b><span>${n.description ? (n.description.length>80 ? n.description.slice(0,80)+'…' : n.description) : 'No details'}</span></div></td>
+      <td class="mono">${n.startDate || '—'}</td>
+      <td class="mono">${n.finishDate || '—'}</td>
+      <td><span class="badge" style="${statusClass==='success'?'background:var(--success-soft);color:var(--success);':statusClass==='danger'?'background:var(--danger-soft);color:var(--danger);':''}">${statusLabel}</span></td>
+      <td>
+        <div class="row-actions">
+          <button onclick="editNote('${n.id}')" title="Edit">${ICONS.edit}</button>
+          <button class="del" onclick="deleteNote('${n.id}')" title="Delete">${ICONS.trash}</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const tableOrEmpty = list.length ? `
+    <div class="table-wrap"><div class="table-scroll">
+      <table>
+        <thead><tr><th>Note</th><th>Start Date</th><th>Finish Date</th><th>Status</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div></div>` : `
+    <div class="table-wrap"><div class="empty-state">
+      <div class="stamp">${ICONS.history}<span>EMPTY</span></div>
+      <h3>No notes yet</h3>
+      <p>Log a task or problem you need to follow up on for ${c.nama}.</p>
+      <button class="btn btn-primary btn-sm" onclick="openNoteModal()">${ICONS.plus} Add Note</button>
+    </div></div>`;
+
+  return `
+    <div class="page-head">
+      <div>
+        <div class="eyebrow">Personal</div>
+        <h2>My Notes</h2>
+        <p>Follow-up notes for ${c.nama} — ${list.length} saved.</p>
+      </div>
+      <button class="btn btn-primary" onclick="openNoteModal()">${ICONS.plus} Add Note</button>
+    </div>
+    ${tableOrEmpty}`;
+}
+function openNoteModal(){
+  state.editingNoteId = null;
+  document.getElementById('noteModalTitle').textContent = 'Add Note';
+  document.getElementById('nt-title').value = '';
+  document.getElementById('nt-description').value = '';
+  document.getElementById('nt-start').value = new Date().toISOString().slice(0,10);
+  document.getElementById('nt-finish').value = '';
+  document.getElementById('nt-status').value = 'Open';
+  document.getElementById('noteModal').classList.add('open');
+}
+function editNote(id){
+  const n = state.notes.find(x=>x.id===id);
+  if(!n) return;
+  state.editingNoteId = id;
+  document.getElementById('noteModalTitle').textContent = 'Edit Note';
+  document.getElementById('nt-title').value = n.title;
+  document.getElementById('nt-description').value = n.description || '';
+  document.getElementById('nt-start').value = n.startDate || '';
+  document.getElementById('nt-finish').value = n.finishDate || '';
+  document.getElementById('nt-status').value = n.status || 'Open';
+  document.getElementById('noteModal').classList.add('open');
+}
+function closeNoteModal(){ document.getElementById('noteModal').classList.remove('open'); }
+function saveNote(){
+  const title = document.getElementById('nt-title').value.trim();
+  if(!title){ toast('Title is required'); return; }
+  const data = {
+    title,
+    description: document.getElementById('nt-description').value.trim(),
+    startDate: document.getElementById('nt-start').value,
+    finishDate: document.getElementById('nt-finish').value,
+    status: document.getElementById('nt-status').value
+  };
+  const wasEditing = !!state.editingNoteId;
+  if(state.editingNoteId){
+    const n = state.notes.find(x=>x.id===state.editingNoteId);
+    Object.assign(n, data);
+  } else {
+    state.notes.push(Object.assign({id:'note'+Date.now(), companyId: state.currentCompanyId, createdAt: new Date().toISOString()}, data));
+  }
+  closeNoteModal();
+  renderContent();
+  toast(wasEditing ? 'Note updated' : 'Note added');
+  scheduleSave();
+}
+function deleteNote(id){
+  const n = state.notes.find(x=>x.id===id);
+  if(!n) return;
+  if(!confirm(`Delete note "${n.title}"?`)) return;
+  state.notes = state.notes.filter(x=>x.id!==id);
+  renderContent();
+  toast('Note deleted');
+  scheduleSave();
 }
 
 /* ============ MASTER SUPPLIER ============ */
