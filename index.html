@@ -478,6 +478,8 @@
         My Notes
       </div>
     </div>
+    <!-- Procurement and PMC modules hidden from navigation (temporarily disabled) -->
+    <!--
     <div class="nav-section">
       <div class="nav-label">Modules</div>
       <div class="nav-item" id="nav-procurement-head" onclick="toggleProcurementMenu()">
@@ -536,6 +538,7 @@
         </div>
       </div>
     </div>
+    -->
     <div class="nav-section">
       <div class="nav-label">Settings</div>
       <div class="nav-item" id="nav-company-management" onclick="navigate('company-management')">
@@ -1297,20 +1300,14 @@ function dashboardHTML(){
       </div>
     </div>
     <div class="kpi-grid">
-      <div class="kpi-card"><div class="label">Total Suppliers ${ICONS.users}</div><div class="value">${list.length}</div><div class="sub">registered in master data</div></div>
-      <div class="kpi-card"><div class="label">Active Suppliers ${ICONS.check}</div><div class="value">${active}</div><div class="sub">ready for transactions</div></div>
-      <div class="kpi-card"><div class="label">Items Registered ${ICONS.tag}</div><div class="value">${itemsCount}</div><div class="sub">in item master</div></div>
-      <div class="kpi-card"><div class="label">Comparisons Saved ${ICONS.history}</div><div class="value">${comparisonsCount}</div><div class="sub">price comparisons on record</div></div>
-      <div class="kpi-card"><div class="label">BOMs Created ${ICONS.tag}</div><div class="value">${bomsCount}</div><div class="sub">bills of material on record</div></div>
       <div class="kpi-card"><div class="label">Open Notes ${ICONS.history}</div><div class="value">${openNotesCount}</div><div class="sub">need follow-up</div></div>
-      <div class="kpi-card"><div class="label">Business Categories ${ICONS.tag}</div><div class="value">${cats}</div><div class="sub">distinct categories recorded</div></div>
       <div class="kpi-card"><div class="label">Registered Companies ${ICONS.building}</div><div class="value">${state.companies.length}</div><div class="sub">workspaces available</div></div>
     </div>
     <div class="welcome-panel">
       <div class="stamp">${ICONS.check}<span>PROCURE</span></div>
       <div>
         <h3>Welcome back, ${state.user ? state.user.name : ''}.</h3>
-        <p>Start with Master Supplier to make sure vendor data is complete and accurate before processing purchase requests.</p>
+        <p>Use My Notes to track tasks and problems that need follow-up for this company.</p>
       </div>
     </div>`;
 }
